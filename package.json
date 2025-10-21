@@ -42,14 +42,14 @@
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/tamago-labs/kilolend.git"
+        "url": "git+https://github.com/tamago-labs/kaia-mcp.git"
     },
     "author": "Pisuth",
     "license": "MIT",
     "bugs": {
-        "url": "https://github.com/tamago-labs/kilolend/issues"
+        "url": "https://github.com/tamago-labs/kaia-mcp/issues"
     },
-    "homepage": "https://kilolend.com",
+    "homepage": "https://kilolend.xyz",
     "dependencies": {
         "@modelcontextprotocol/sdk": "^1.10.2",
         "axios": "^1.10.0",
