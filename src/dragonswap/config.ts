@@ -34,11 +34,13 @@ export const DRAGONSWAP_CONTRACTS = {
 export const TOKENS = {
     // Native
     KAIA: "0x0000000000000000000000000000000000000000" as Address,
-    WKAI: "0x3a8B8E5395787622360e5348C8C93b432e5F2A6B" as Address, // Wrapped KAIA
+    WKAIA: "0x19aac5f612f524b754ca7e7c41cbfa2e981a4432" as Address, // Wrapped KAIA 
     
     // Major Tokens
-    USDT: "0x5C13E303a62Fc5DEdf5B52D66873f2E59fEdADC2" as Address,
-    USDC: "0x5c7F8A570d578ED84E63fdFA7b1eE72dE1a1476A" as Address,
+    USDT_OFFICIAL: "0xd077a400968890eacc75cdc901f0356c943e4fdb" as Address, // Official USDT  
+    USDT_WORMHOLE: "0x5c13e303a62fc5dedf5b52d66873f2e59fedadc2" as Address, // Wormhole USDT  
+    USDT: "0xd077a400968890eacc75cdc901f0356c943e4fdb" as Address, // Default to Official USDT  
+     
     BORA: "0x02cbE46fB8A1F579254a9B485788f2D86Cad51aa" as Address,
     SIX: "0xEf82b1C6A550e730D8283E1eDD4977cd01FAF435" as Address,
     MBX: "0xD068c52d81f4409B9502dA926aCE3301cc41f623" as Address,
@@ -46,12 +48,13 @@ export const TOKENS = {
     RKLAY: "0xf898c138f9c8825cef83ca75535ed77100497296" as Address,
 } as const;
 
-// Fee Tiers for V3 Pools
+// Fee Tiers for V3 Pools (Updated based on actual liquidity on Kaia)
 export const FEE_TIERS = {
     LOWEST: 100,      // 0.01%
     LOW: 500,         // 0.05%
-    MEDIUM: 3000,     // 0.3%
-    HIGH: 10000,      // 1%
+    MEDIUM: 1000,     // 0.1%  
+    HIGH: 3000,       // 0.3%
+    HIGHEST: 10000,   // 1%
 } as const;
 
 // Default Slippage Tolerance (in basis points)
@@ -67,6 +70,7 @@ export const POOL_CONSTANTS = {
     TICK_SPACING: {
         100: 1,
         500: 10,
+        1000: 20,      // 0.1% fee tier tick spacing
         3000: 60,
         10000: 200,
     },

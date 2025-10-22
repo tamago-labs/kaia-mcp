@@ -49,7 +49,9 @@ const CONTRACT_ADDRESSES = {
         cStKAIA: "0x0BC926EF3856542134B06DCf53c86005b08B9625",
         
         // Underlying Token Addresses
-        usdt: "0xd077A400968890Eacc75cdc901F0356c943e4fDb",
+        usdt_official: "0xd077a400968890eacc75cdc901f0356c943e4fdb", // Official USDT (fixed checksum)
+        usdt_wormhole: "0x5c13e303a62fc5dedf5b52d66873f2e59fedadc2", // Wormhole USDT (fixed checksum)
+        usdt: "0xd077a400968890eacc75cdc901f0356c943e4fdb", // Default to Official USDT (fixed checksum)
         six: "0xEf82b1C6A550e730D8283E1eDD4977cd01FAF435",
         bora: "0x02cbE46fB8A1F579254a9B485788f2D86Cad51aa",
         mbx: "0xD068c52d81f4409B9502dA926aCE3301cc41f623",
@@ -60,7 +62,7 @@ const CONTRACT_ADDRESSES = {
 // Network configurations - Kaia Mainnet only
 const networkConfigs: Record<NetworkType, NetworkConfig> = {
     kaia: {
-        rpcProviderUrl: process.env.RPC_URL || 'https://public-en.node.kaia.io',
+        rpcProviderUrl: process.env.RPC_URL || 'https://rpc.ankr.com/kaia',
         blockExplorer: 'https://www.kaiascan.io',
         chain: kaia,
         chainId: 8217,

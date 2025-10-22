@@ -23,8 +23,8 @@ export const GetPoolInfoTool: Tool = {
       },
       fee: {
         type: "number",
-        description: "Fee tier in basis points (100, 500, 3000, 10000). If not provided, returns all available pools.",
-        enum: [100, 500, 3000, 10000]
+        description: "Fee tier in basis points (100, 500, 1000, 3000, 10000). If not provided, returns all available pools.",
+        enum: [100, 500, 1000, 3000, 10000]
       }
     },
     required: ["token0", "token1"]
@@ -160,9 +160,11 @@ function getFeeTierName(fee: number): string {
     case FEE_TIERS.LOW:
       return "Low (0.05%)";
     case FEE_TIERS.MEDIUM:
-      return "Medium (0.3%)";
+      return "Medium (0.1%)";
     case FEE_TIERS.HIGH:
-      return "High (1%)";
+      return "High (0.3%)";
+    case FEE_TIERS.HIGHEST:
+      return "Highest (1%)";
     default:
       return `${fee / 100}%`;
   }

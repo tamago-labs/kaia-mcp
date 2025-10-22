@@ -274,16 +274,13 @@ KAIA_RPC_URL=https://public-en.node.kaia.io PRIVATE_KEY=your_key AGENT_MODE=tran
 
 ### DragonSwap Supported Tokens
 - **KAIA**: Native token (`0x0000000000000000000000000000000000000000`)
-- **WKAI**: Wrapped KAIA (`0x3a8B8E5395787622360e5348C8C93b432e5F2A6B`)
-- **USDT**: Tether (`0xd077A400968890EaCc75cDc901F0356c943e4fDb`)
-- **USDC**: USD Coin (`0x5c7F8A570d578ED84E63fDFA7b1eE72dE1a1476A`)
+- **WKAI**: Wrapped KAIA (`0x19aac5f612f524b754ca7e7c41cbfa2e981a4432`)
+- **USDT**: Official USDT(`0xd077a400968890eacc75cdc901f0356c943e4fdb`)
+- **USDT**: Wormhole USDT(`0x5c7F8A570d578ED84E63fDFA7b1eE72dE1a1476A`)
 - **BORA**: BORA Token (`0x02cBE46fB8A1F579254a9B485788f2D86cAD51aa`)
-
-#### DragonSwap Fee Tiers
-- **Lowest**: 0.01% (100)
-- **Low**: 0.05% (500)
-- **Medium**: 0.3% (3000)
-- **High**: 1% (10000)
+- **MBX**: MBX Token (`0xD068c52d81f4409B9502dA926aCE3301cc41f623`)
+- **stKAIA**: Lair Staked KAIA (`0x42952B873ed6f7f0A7E4992E2a9818E3A9001995`)
+ 
 
 ## Future Protocol Support
 
@@ -293,14 +290,7 @@ We're actively working on adding support for:
 - **Additional Lending Protocols**: More lending platforms
 - **Staking Protocols**: Kaia staking and liquid staking
 - **Yield Farming**: Cross-protocol yield optimization
-
-## Security Considerations
-
-- Private keys are handled securely and never logged
-- Transaction mode requires explicit private key
-- Read-only mode is safe for production use
-- Always verify transaction parameters before execution
-
+ 
 ## Development
 
 ### Building
@@ -355,32 +345,8 @@ All tools return responses in this format:
   "recommendations": ["Actionable advice..."]
 }
 ```
-
-## Error Handling
-
-The server provides detailed error messages for:
-- Network connectivity issues
-- Invalid parameters
-- Insufficient balances
-- Transaction failures
-- Contract interaction errors
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
+ 
 ## License
 
 MIT License - see LICENSE file for details.
-
-## Support
-
-For issues and questions:
-- Create an issue on GitHub
-- Check the documentation
-- Review the examples in `EXAMPLES.md`
-- Check `TESTING.md` for testing guidance
+ 

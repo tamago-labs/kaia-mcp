@@ -98,22 +98,28 @@ class DragonSwapRouter {
     const amountInWei = parseUnits(amountIn, amountInDecimals);
 
     try {
-      // Try different fee tiers to find the best route
-      const feeTiers = [FEE_TIERS.LOWEST, FEE_TIERS.LOW, FEE_TIERS.MEDIUM, FEE_TIERS.HIGH];
+      // Try different fee tiers to find the best route 
+      const feeTiers = [FEE_TIERS.LOWEST, FEE_TIERS.LOW, FEE_TIERS.MEDIUM, FEE_TIERS.HIGH, FEE_TIERS.HIGHEST];
       let bestQuote: SwapQuote | null = null;
 
       for (const fee of feeTiers) {
         try {
+          // console.log(`Trying fee tier ${fee}...`);
           const quote = await this.calculateQuoteFromPool(tokenIn, tokenOut, amountIn, amountInDecimals, fee);
+          // console.log(`Quote for fee ${fee}:`, quote);
           
           if (!bestQuote || BigInt(bestQuote.amountOut) < BigInt(quote.amountOut)) {
             bestQuote = quote;
+            // console.log(`New best quote found for fee ${fee}`);
           }
-        } catch (error) {
+        } catch (error: any) {
           // Skip this fee tier if pool doesn't exist
+          // console.log(`Fee tier ${fee} failed:`, error.message);
           continue;
         }
       }
+
+      // console.log("bestQuote: ", bestQuote)
 
       if (!bestQuote) {
         throw new Error('No available pools found for this token pair');
@@ -383,7 +389,7 @@ class DragonSwapRouter {
           { ...poolContract, functionName: 'slot0' },
         ],
       });
-
+ 
       return {
         address: poolAddress,
         token0: poolToken0.result as Address,
@@ -403,7 +409,7 @@ class DragonSwapRouter {
    * Get all available pools for a token pair across different fee tiers
    */
   async getAllPools(token0: Address, token1: Address): Promise<PoolInfo[]> {
-    const feeTiers = [FEE_TIERS.LOWEST, FEE_TIERS.LOW, FEE_TIERS.MEDIUM, FEE_TIERS.HIGH];
+    const feeTiers = [FEE_TIERS.LOWEST, FEE_TIERS.LOW, FEE_TIERS.MEDIUM, FEE_TIERS.HIGH, FEE_TIERS.HIGHEST];
     const pools: PoolInfo[] = [];
 
     for (const fee of feeTiers) {
