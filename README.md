@@ -1,5 +1,7 @@
 # KAIA-MCP Server
 
+![NPM Version](https://img.shields.io/npm/v/@tamago-labs/kaia-mcp)
+
 A comprehensive Model Context Protocol (MCP) server for interacting with multiple DeFi protocols on the KAIA blockchain. This server provides AI agents with the ability to query market data, manage positions, and execute transactions across lending protocols, DEXs, and staking platforms in the Kaia ecosystem.
 
 ## Features
@@ -61,6 +63,36 @@ The KAIA-MCP server fetches real-time data directly from the Kaia blockchain:
 - **Quoter V2**: `0x673d88960D320909af24db6eE7665aF223fec060`
 - **Factory**: `0x7431A23897ecA6913D5c81666345D39F27d946A4`
 
+
+## Using with Claude Desktop
+
+1. Install Claude Desktop if you haven't already
+2. Open Claude Desktop settings
+3. Add the KAIA MCP client to your configuration:
+
+```json
+{
+  "mcpServers": {
+    "kaia-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@tamago-labs/kaia-mcp"
+      ],
+      "env": {
+        "KAIA_RPC_URL": "https://public-en.node.kaia.io",
+        "KAIA_AGENT_MODE": "transaction",
+        "KAIA_PRIVATE_KEY": "YOUR_PRIVATE_KEY"
+      },
+      "disabled": false
+    }
+  }
+}
+```
+
+You can run it in read-only mode by omitting `KAIA_PRIVATE_KEY` and setting `KAIA_AGENT_MODE` to "readonly" (or omitting it entirely, as it defaults to readonly).
+
+
 ## Architecture
 
 This MCP server follows a clean, modular architecture designed for multi-protocol support:
@@ -110,10 +142,11 @@ Create a `.env` file based on `.env.example`:
 ```bash
 # Required
 KAIA_RPC_URL="https://public-en.node.kaia.io"         # KAIA Mainnet RPC URL
-PRIVATE_KEY="your_private_key_here"                  # Wallet private key (for transaction mode)
 
 # Optional
-AGENT_MODE="read_only"                               # "read_only" or "transaction"
+KAIA_PRIVATE_KEY="your_private_key_here"             # Wallet private key (for transaction mode)
+KAIA_AGENT_MODE="readonly"                           # "readonly" or "transaction" (defaults to readonly)
+KAIA_NETWORK="kaia"                                  # Network (only kaia supported currently)
 ```
 
 ### Agent Modes
@@ -180,8 +213,8 @@ Add to your MCP client configuration:
       "args": ["dist/index.js"],
       "env": {
         "KAIA_RPC_URL": "https://public-en.node.kaia.io",
-        "PRIVATE_KEY": "your_private_key",
-        "AGENT_MODE": "transaction"
+        "KAIA_PRIVATE_KEY": "your_private_key",
+        "KAIA_AGENT_MODE": "transaction"
       }
     }
   }
@@ -192,10 +225,10 @@ Add to your MCP client configuration:
 
 ```bash
 # Start in read-only mode
-KAIA_RPC_URL=https://public-en.node.kaia.io AGENT_MODE=read_only node dist/index.js
+KAIA_RPC_URL=https://public-en.node.kaia.io KAIA_AGENT_MODE=readonly node dist/index.js
 
 # Start in transaction mode
-KAIA_RPC_URL=https://public-en.node.kaia.io PRIVATE_KEY=your_key AGENT_MODE=transaction node dist/index.js
+KAIA_RPC_URL=https://public-en.node.kaia.io KAIA_PRIVATE_KEY=your_key KAIA_AGENT_MODE=transaction node dist/index.js
 ```
 
 ### Example Tool Calls
@@ -345,8 +378,84 @@ All tools return responses in this format:
   "recommendations": ["Actionable advice..."]
 }
 ```
+
+
+## Troubleshooting
+
+If you're using Ubuntu or another Linux environment with NVM, you'll need to manually configure the path. Follow these steps:
+
+1. Install the KAIA MCP under your current NVM-managed Node.js version.
+
+```bash
+npm install -g @tamago-labs/kaia-mcp
+```
+
+2. Due to how NVM installs libraries, you may need to use absolute paths in your config. Replace the example values below with your actual username and Node version:
+
+```json
+{
+  "mcpServers": {
+    "kaia-mcp": {
+      "command": "/home/YOUR_NAME/.nvm/versions/node/YOUR_NODE_VERSION/bin/node",
+      "args": [
+        "/home/YOUR_NAME/.nvm/versions/node/YOUR_NODE_VERSION/bin/@tamago-labs/kaia-mcp"
+      ],
+      "env": {
+        "KAIA_RPC_URL": "https://public-en.node.kaia.io",
+        "KAIA_AGENT_MODE": "transaction",
+        "KAIA_PRIVATE_KEY": "YOUR_PRIVATE_KEY"
+      }
+    }
+  }
+}
+```
+
+3. Restart Claude Desktop and it should work now.
+
+### Environment Variable Issues
+
+If you encounter issues with environment variables not being recognized:
+
+1. **Check required variables**: Make sure `KAIA_RPC_URL` is always set
+2. **Verify mode settings**: `KAIA_AGENT_MODE` should be either "readonly" or "transaction"
+3. **Private key format**: `KAIA_PRIVATE_KEY` should be a valid private key (with or without 0x prefix)
+4. **Debug logging**: The server will log all configuration on startup to stderr
+
+Example environment validation output:
+```
+✅ KAIA-MCP environment configuration valid
+📍 Mode: transaction
+📍 Network: kaia
+📍 RPC URL: https://public-en.node.kaia.io
+📍 Chain ID: 8217
+📍 Native Currency: KAIA
+📍 Account: 0x1234...
+📍 Using provided private key for transactions
+```
+
+## Work with Local Files
+
+When working with local files especially when using KAIA CLI tools for smart contract development to create, build, and test a Move package on your machine—you'll need to import an additional MCP server library of `filesystem` made by Claude team. Use with:
+
+```json
+"filesystem": {
+  "command": "npx",
+  "args": [
+    "-y",
+    "@modelcontextprotocol/server-filesystem",
+    "${workspaceFolder}"
+  ],
+  "env":{
+        
+  },
+  "disabled": false
+}
+```
+
+`workspaceFolder` refers to your working directory. You can provide more than one argument. Subfolders or specific files can then be referenced in your AI prompt.
+
+If you're using Linux and encounter issues during setup, please refer to the troubleshooting section.
  
 ## License
 
 MIT License - see LICENSE file for details.
- 

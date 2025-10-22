@@ -7,26 +7,17 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { z } from 'zod';
 import { WalletAgent } from './agent/wallet';
-import { validateEnvironment, agentMode, account } from './config';
+import { validateEnvironment, agentMode, account, getEnvironmentConfig } from './config';
 import { KaiaWalletTools, KaiaReadOnlyTools } from './mcp';
 import { DragonSwapTools, DragonSwapReadOnlyTools, DragonSwapToolHandlers, createDragonSwapRouter, initializeDragonSwapTools, IDragonSwapRouter } from './mcp/dragonswap';
 
 // Validate environment configuration
 validateEnvironment();
 
-// Helper function to get private key from command line arguments
+// Get private key from environment configuration
 const getPrivateKey = (): string | undefined => {
-    const args = process.argv.reduce((args: any, arg: any) => {
-        if (arg.slice(0, 2) === "--") {
-            const longArg = arg.split("=");
-            const longArgFlag = longArg[0].slice(2);
-            const longArgValue = longArg.length > 1 ? longArg[1] : true;
-            args[longArgFlag] = longArgValue;
-        }
-        return args;
-    }, {});
-    
-    return args.wallet_private_key;
+    const config = getEnvironmentConfig();
+    return config.privateKey;
 };
 
 // Create server instance

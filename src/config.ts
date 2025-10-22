@@ -1,6 +1,7 @@
 import { Chain, createPublicClient, createWalletClient, http, WalletClient } from 'viem';
 import { privateKeyToAccount, Address, Account, generatePrivateKey } from 'viem/accounts';
 import { kaia } from 'viem/chains'
+import { z } from 'zod';
 
 type NetworkType = 'kaia'
 
@@ -14,24 +15,23 @@ interface NetworkConfig {
     nativeCurrency: string;
 }
 
-const getArgs = () =>
-    process.argv.reduce((args: any, arg: any) => {
-        // long arg
-        if (arg.slice(0, 2) === "--") {
-            const longArg = arg.split("=");
-            const longArgFlag = longArg[0].slice(2);
-            const longArgValue = longArg.length > 1 ? longArg[1] : true;
-            args[longArgFlag] = longArgValue;
-        }
-        // flags
-        else if (arg[0] === "-") {
-            const flags = arg.slice(1).split("");
-            flags.forEach((flag: any) => {
-                args[flag] = true;
-            });
-        }
-        return args;
-    }, {});
+// KAIA MCP Environment Configuration
+export interface KAIAMCPEnvironment {
+    kaiaRpcUrl: string;
+    privateKey?: string;
+    agentMode: AgentMode;
+    network: NetworkType;
+}
+
+// Validation schemas using zod
+export const KAIAMCPEnvironmentSchema = z.object({
+    kaiaRpcUrl: z.string().url().describe("KAIA RPC URL"),
+    privateKey: z.string().optional().describe("Wallet private key for transaction mode"),
+    agentMode: z.enum(['readonly', 'transaction']).default('readonly').describe("Agent mode: readonly or transaction"),
+    network: z.enum(['kaia']).default('kaia').describe("Network to use")
+});
+
+export type KAIAMCPEnvironmentInput = z.infer<typeof KAIAMCPEnvironmentSchema>;
 
 // Contract addresses for Kaia Mainnet - KiloLend Protocol
 const CONTRACT_ADDRESSES = {
@@ -59,10 +59,63 @@ const CONTRACT_ADDRESSES = {
     }
 } as const;
 
+export function getEnvironmentConfig(): KAIAMCPEnvironment {
+    // Validate required environment variables
+    const required = ['KAIA_RPC_URL'];
+    const missing = required.filter(key => !process.env[key]);
+    
+    if (missing.length > 0) {
+        console.error(`❌ Missing required environment variables: ${missing.join(', ')}`);
+        console.error(`💡 Please set the following in your .env file:`);
+        missing.forEach(key => {
+            const envKey = key.replace('KAIA_', '').toLowerCase();
+            console.error(`   ${key}=your_${envKey}_here`);
+        });
+        throw new Error('Missing required KAIA MCP configuration');
+    }
+
+    const config: KAIAMCPEnvironment = {
+        kaiaRpcUrl: process.env.KAIA_RPC_URL!,
+        agentMode: (process.env.KAIA_AGENT_MODE as AgentMode) || 'readonly',
+        network: (process.env.KAIA_NETWORK as NetworkType) || 'kaia'
+    };
+
+    // Only add private key if it exists
+    if (process.env.KAIA_PRIVATE_KEY) {
+        config.privateKey = process.env.KAIA_PRIVATE_KEY;
+    }
+
+    return config;
+}
+
+// Validate environment variables and log configuration
+export function validateEnvironment(): void {
+    try {
+        const config = getEnvironmentConfig();
+        console.error(`✅ KAIA-MCP environment configuration valid`);
+        console.error(`📍 Mode: ${config.agentMode}`);
+        console.error(`📍 Network: ${config.network}`);
+        console.error(`📍 RPC URL: ${config.kaiaRpcUrl}`);
+        console.error(`📍 Chain ID: ${networkInfo.chainId}`);
+        console.error(`📍 Native Currency: ${networkInfo.nativeCurrency}`);
+        console.error(`📍 Account: ${account.address}`);
+
+        if (config.privateKey) {
+            console.error(`📍 Using provided private key for transactions`);
+        } else {
+            console.error(`📍 No private key provided - read-only mode`);
+        }
+
+    } catch (error) {
+        console.error('❌ Invalid environment configuration:', error);
+        throw error;
+    }
+}
+
 // Network configurations - Kaia Mainnet only
 const networkConfigs: Record<NetworkType, NetworkConfig> = {
     kaia: {
-        rpcProviderUrl: process.env.RPC_URL || 'https://rpc.ankr.com/kaia',
+        rpcProviderUrl: 'https://public-en.node.kaia.io',
         blockExplorer: 'https://www.kaiascan.io',
         chain: kaia,
         chainId: 8217,
@@ -71,24 +124,24 @@ const networkConfigs: Record<NetworkType, NetworkConfig> = {
 } as const;
 
 const getNetwork = (): NetworkType => {
-    const args = getArgs();
-    const network = args.network as NetworkType;
+    const config = getEnvironmentConfig();
+    const network = config.network;
 
     if (network && !(network in networkConfigs)) {
         throw new Error(`Invalid network: ${network}. Only 'kaia' is supported.`);
     }
-    return 'kaia'; // Always return kaia since it's the only supported network
+    return network || 'kaia';
 };
 
 const getAccount = (): Account => {
-    const args = getArgs();
-    const hasPrivateKey = !!(args?.wallet_private_key);
+    const config = getEnvironmentConfig();
+    const hasPrivateKey = !!(config?.privateKey);
 
     if (!hasPrivateKey) {
         const privateKey = generatePrivateKey();
         return privateKeyToAccount(privateKey);
     } else {
-        const privateKey = args.wallet_private_key;
+        const privateKey = config.privateKey!;
         const formattedPrivateKey = privateKey.startsWith('0x') ? privateKey : `0x${privateKey}`;
         return privateKeyToAccount(formattedPrivateKey as Address);
     }
@@ -99,7 +152,7 @@ export const network = getNetwork();
 
 export const networkInfo = {
     ...networkConfigs[network],
-    rpcProviderUrl: networkConfigs[network].rpcProviderUrl,
+    rpcProviderUrl: getEnvironmentConfig().kaiaRpcUrl,
 };
 
 // API Configuration
@@ -112,9 +165,8 @@ export const apiConfig = {
 export const account: Account = getAccount()
 
 const getMode = (): AgentMode => {
-    const args = getArgs();
-    const mode = args.agent_mode as AgentMode;
-    return mode || 'readonly';
+    const config = getEnvironmentConfig();
+    return config.agentMode;
 }
 
 export const agentMode: AgentMode = getMode()
@@ -154,37 +206,6 @@ export function getContractAddresses(networkType: NetworkType) {
     return CONTRACT_ADDRESSES[networkType];
 }
 
-export function validateEnvironment(): void {
-    try {
-        const args = getArgs();
-        const hasAgentMode = !!(args?.agent_mode)
-
-        if (!hasAgentMode) {
-            console.error(`AGENT_MODE is not set, default to readonly mode`);
-        } else {
-            console.error(`✅ KAIA-MCP mode: ${args.agent_mode}`);
-        }
-
-        if (args.agent_mode === "transaction") {
-            console.error(`✅ KAIA-MCP environment configuration valid (${network})`);
-            console.error(`📍 RPC URL: ${networkInfo.rpcProviderUrl}`);
-            console.error(`📍 Chain ID: ${networkInfo.chainId}`);
-            console.error(`📍 Native Currency: ${networkInfo.nativeCurrency}`);
-            getAccount()
-            console.error(`📍 Account: ${account.address}`);
-        }
-
-        if (args.wallet_private_key) {
-            console.error(`📍 Using provided private key for transactions`);
-        } else {
-            console.error(`📍 No private key provided - read-only mode`);
-        }
-
-    } catch (error) {
-        console.error('❌ Invalid environment configuration:', error);
-        throw error;
-    }
-}
 
 // Export network configs for external use
 export { networkConfigs, CONTRACT_ADDRESSES, type NetworkType };
