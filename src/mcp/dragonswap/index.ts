@@ -1,7 +1,7 @@
 import { GetSwapQuoteTool, handleGetSwapQuote } from "./get_swap_quote_tool";
 import { ExecuteSwapTool, handleExecuteSwap } from "./execute_swap_tool";
 import { GetPoolInfoTool, handleGetPoolInfo } from "./get_pool_info_tool";
-import { dragonSwapRouter } from "../../dragonswap/router";
+import { dragonSwapRouter, createDragonSwapRouter, IDragonSwapRouter } from "../../dragonswap/router";
 
 export const DragonSwapTools = {
     // Quote and swap operations
@@ -16,12 +16,15 @@ export const DragonSwapReadOnlyTools = {
     "GetPoolInfoTool": GetPoolInfoTool,
 };
 
-// Tool handlers
-export const DragonSwapToolHandlers = {
-    "get_dragonswap_quote": handleGetSwapQuote,
-    "execute_dragonswap_swap": handleExecuteSwap,
-    "get_dragonswap_pool_info": handleGetPoolInfo,
-};
+// Tool handlers (will be initialized with router)
+export const DragonSwapToolHandlers: any = {};
 
 // Export the router for direct access
-export { dragonSwapRouter };
+export { dragonSwapRouter, createDragonSwapRouter, IDragonSwapRouter };
+
+// Function to initialize tool handlers with router instance
+export function initializeDragonSwapTools(router: IDragonSwapRouter) {
+  DragonSwapToolHandlers["get_dragonswap_quote"] = (args: any) => handleGetSwapQuote(args, router);
+  DragonSwapToolHandlers["execute_dragonswap_swap"] = (args: any) => handleExecuteSwap(args, router);
+  DragonSwapToolHandlers["get_dragonswap_pool_info"] = (args: any) => handleGetPoolInfo(args, router);
+}

@@ -5,8 +5,8 @@ A comprehensive Model Context Protocol (MCP) server for interacting with multipl
 ## Features
 
 ### 📊 Multi-Protocol Support
-- **Lending Protocols**: KiloLend and other lending platforms
-- **DEX Integration**: KlaySwap, DragonSwap, and more (coming soon)
+- **Lending Protocols**: KiloLend (Compound v2 fork) and other lending platforms
+- **DEX Integration**: DragonSwap V3 and more
 - **Staking Platforms**: Kaia staking and liquid staking (planned)
 - **Cross-Protocol Operations**: Yield farming strategies and portfolio optimization
 
@@ -30,7 +30,7 @@ A comprehensive Model Context Protocol (MCP) server for interacting with multipl
 - Supply assets to lending markets
 - Borrow from lending markets
 - Repay borrowed positions
-- DEX swaps and liquidity operations (coming soon)
+- DEX swaps and liquidity operations
 
 ## Real Blockchain Data Integration
 
@@ -49,10 +49,17 @@ The KAIA-MCP server fetches real-time data directly from the Kaia blockchain:
 - **Borrowing Capacity**: Accurate calculations using real market data
 
 ### 🔗 Smart Contract Integration
+
+#### KiloLend (Compound v2) Contracts
 - **Comptroller**: `0x0B5f0Ba5F13eA4Cb9C8Ee48FB75aa22B451470C2`
 - **Price Oracle**: `0xBB265F42Cce932c5e383536bDf50B82e08eaf454`
 - **cToken Markets**: Direct integration with all lending markets
 - **Real-time Events**: Live blockchain state updates
+
+#### DragonSwap V3 Contracts
+- **Router**: `0xA324880f884036E3d21a09B90269E1aC57c7EC8a`
+- **Quoter V2**: `0x673d88960D320909af24db6eE7665aF223fec060`
+- **Factory**: `0x7431A23897ecA6913D5c81666345D39F27d946A4`
 
 ## Architecture
 
@@ -64,8 +71,16 @@ src/
 │   └── wallet.ts    # Unified WalletAgent for all operations
 ├── mcp/             # MCP tool definitions
 │   ├── index.ts     # Tool registry and exports
-│   └── wallet/      # Individual tool implementations
+│   ├── wallet/      # KiloLend tool implementations
+│   └── dragonswap/  # DragonSwap tool implementations
 ├── contracts/       # Smart contract interfaces
+│   ├── comptroller.ts
+│   ├── ctoken.ts
+│   └── erc20.ts
+├── dragonswap/      # DragonSwap V3 integration
+│   ├── config.ts    # DragonSwap configuration
+│   ├── router.ts    # Swap routing logic
+│   └── contracts/abi/  # DragonSwap contract ABIs
 ├── utils/           # Utility functions (validation, formatting, errors)
 └── config.ts        # Configuration management
 ```
@@ -94,12 +109,11 @@ Create a `.env` file based on `.env.example`:
 
 ```bash
 # Required
-RPC_URL="https://public-en.node.kaia.io"         # KAIA Mainnet RPC URL
-PRIVATE_KEY="your_private_key_here"              # Wallet private key (for transaction mode)
+KAIA_RPC_URL="https://public-en.node.kaia.io"         # KAIA Mainnet RPC URL
+PRIVATE_KEY="your_private_key_here"                  # Wallet private key (for transaction mode)
 
 # Optional
-AGENT_MODE="read-only"                           # "read-only" or "transaction"
-PRICE_API_URL="https://api.coingecko.com/api/v3" # Price API for token values
+AGENT_MODE="read_only"                               # "read_only" or "transaction"
 ```
 
 ### Agent Modes
@@ -108,6 +122,7 @@ PRICE_API_URL="https://api.coingecko.com/api/v3" # Price API for token values
 - Query market data
 - Check wallet balances
 - Monitor positions
+- Get swap quotes
 - No transaction capabilities
 
 #### Transaction Mode
@@ -115,27 +130,41 @@ PRICE_API_URL="https://api.coingecko.com/api/v3" # Price API for token values
 - Execute transactions
 - Supply/borrow assets
 - Transfer tokens
+- Execute DEX swaps
 
 ## Available Tools
 
-### Read-Only Tools
+### KiloLend Tools
 
+#### Read-Only Tools
 | Tool | Description |
 |------|-------------|
-| `kaia_get_wallet_info` | Get wallet information and token balances |
-| `kaia_get_account_liquidity` | Check account liquidity and health factor |
-| `kaia_get_lending_markets` | Get all lending markets with rates |
-| `kaia_get_lending_stats` | Get protocol statistics and TVL |
+| `get_wallet_info` | Get wallet information and token balances |
+| `get_account_liquidity` | Check account liquidity and health factor |
+| `get_markets` | Get all lending markets with rates |
+| `get_protocol_stats` | Get protocol statistics and TVL |
 
-### Transaction Tools
-
+#### Transaction Tools
 | Tool | Description |
 |------|-------------|
-| `kaia_send_native_token` | Send native KAIA tokens |
-| `kaia_send_erc20_token` | Send ERC-20 tokens |
-| `kaia_supply_to_lending` | Supply assets to lending market |
-| `kaia_borrow_from_lending` | Borrow from lending market |
-| `kaia_repay_lending` | Repay borrowed positions |
+| `send_native_token` | Send native KAIA tokens |
+| `send_erc20_token` | Send ERC-20 tokens |
+| `supply_to_market` | Supply assets to lending market |
+| `borrow_from_market` | Borrow from lending market |
+| `repay_borrow` | Repay borrowed positions |
+
+### DragonSwap Tools
+
+#### Read-Only Tools
+| Tool | Description |
+|------|-------------|
+| `dragonswap_get_pool_info` | Get DragonSwap pool information |
+| `dragonswap_get_swap_quote` | Get swap quotes without executing |
+
+#### Transaction Tools
+| Tool | Description |
+|------|-------------|
+| `dragonswap_execute_swap` | Execute token swaps on DragonSwap |
 
 ## Usage
 
@@ -150,7 +179,7 @@ Add to your MCP client configuration:
       "command": "node",
       "args": ["dist/index.js"],
       "env": {
-        "RPC_URL": "https://public-en.node.kaia.io",
+        "KAIA_RPC_URL": "https://public-en.node.kaia.io",
         "PRIVATE_KEY": "your_private_key",
         "AGENT_MODE": "transaction"
       }
@@ -159,12 +188,22 @@ Add to your MCP client configuration:
 }
 ```
 
+### Start the Server
+
+```bash
+# Start in read-only mode
+KAIA_RPC_URL=https://public-en.node.kaia.io AGENT_MODE=read_only node dist/index.js
+
+# Start in transaction mode
+KAIA_RPC_URL=https://public-en.node.kaia.io PRIVATE_KEY=your_key AGENT_MODE=transaction node dist/index.js
+```
+
 ### Example Tool Calls
 
-#### Get Market Information
+#### Get KiloLend Market Information
 ```json
 {
-  "tool": "kaia_get_lending_markets",
+  "tool": "get_markets",
   "arguments": {}
 }
 ```
@@ -172,21 +211,48 @@ Add to your MCP client configuration:
 #### Check Account Health
 ```json
 {
-  "tool": "kaia_get_account_liquidity",
+  "tool": "get_account_liquidity",
   "arguments": {
     "account_address": "0x..."
   }
 }
 ```
 
-#### Supply to Market (Transaction Mode)
+#### Supply to KiloLend Market (Transaction Mode)
 ```json
 {
-  "tool": "kaia_supply_to_lending",
+  "tool": "supply_to_market",
   "arguments": {
     "ctoken_address": "0x...",
-    "amount": "1000",
-    "private_key": "your_private_key"
+    "amount": "1000"
+  }
+}
+```
+
+#### Get DragonSwap Quote
+```json
+{
+  "tool": "dragonswap_get_swap_quote",
+  "arguments": {
+    "tokenIn": "0x3a8B8E5395787622360e5348C8C93b432e5F2A6B",
+    "tokenOut": "0xd077A400968890EaCc75cDc901F0356c943e4fDb",
+    "amountIn": "1000000000000000000",
+    "fee": "3000"
+  }
+}
+```
+
+#### Execute DragonSwap Swap (Transaction Mode)
+```json
+{
+  "tool": "dragonswap_execute_swap",
+  "arguments": {
+    "tokenIn": "0x3a8B8E5395787622360e5348C8C93b432e5F2A6B",
+    "tokenOut": "0xd077A400968890EaCc75cDc901F0356c943e4fDb",
+    "amountIn": "1000000000000000000",
+    "amountOutMinimum": "1000000",
+    "fee": "3000",
+    "deadline": "1893456000"
   }
 }
 ```
@@ -194,9 +260,11 @@ Add to your MCP client configuration:
 ## Supported Networks
 
 - **Kaia Mainnet**: Production KAIA blockchain
+  - **RPC URL**: `https://public-en.node.kaia.io`
 
 ## Supported Tokens
 
+### KiloLend Supported Tokens
 - **KAIA**: Native KAIA token
 - **USDT**: Tether USD
 - **SIX**: SIX token
@@ -204,12 +272,24 @@ Add to your MCP client configuration:
 - **MBX**: MARBLEX token
 - **stKAIA**: Staked KAIA
 
+### DragonSwap Supported Tokens
+- **KAIA**: Native token (`0x0000000000000000000000000000000000000000`)
+- **WKAI**: Wrapped KAIA (`0x3a8B8E5395787622360e5348C8C93b432e5F2A6B`)
+- **USDT**: Tether (`0xd077A400968890EaCc75cDc901F0356c943e4fDb`)
+- **USDC**: USD Coin (`0x5c7F8A570d578ED84E63fDFA7b1eE72dE1a1476A`)
+- **BORA**: BORA Token (`0x02cBE46fB8A1F579254a9B485788f2D86cAD51aa`)
+
+#### DragonSwap Fee Tiers
+- **Lowest**: 0.01% (100)
+- **Low**: 0.05% (500)
+- **Medium**: 0.3% (3000)
+- **High**: 1% (10000)
+
 ## Future Protocol Support
 
 We're actively working on adding support for:
 
 - **KlaySwap**: Leading Kaia DEX for swaps and liquidity
-- **DragonSwap**: Emerging DEX with innovative features
 - **Additional Lending Protocols**: More lending platforms
 - **Staking Protocols**: Kaia staking and liquid staking
 - **Yield Farming**: Cross-protocol yield optimization
@@ -230,6 +310,11 @@ npm run build
 
 ### Testing
 ```bash
+# Test DragonSwap functionality
+node scripts/test-dragonswap-router.js
+node scripts/test-dragonswap-quote.js
+
+# Run all tests
 npm test
 ```
 
@@ -241,15 +326,22 @@ npm run lint
 ## Contract Addresses
 
 ### Kaia Mainnet
-- Comptroller: `0x0B5f0Ba5F13eA4Cb9C8Ee48FB75aa22B451470C2`
-- Price Oracle: `0xBB265F42Cce932c5e383536bDf50B82e08eaf454`
-- Markets:
+
+#### KiloLend (Compound v2)
+- **Comptroller**: `0x0B5f0Ba5F13eA4Cb9C8Ee48FB75aa22B451470C2`
+- **Price Oracle**: `0xBB265F42Cce932c5e383536bDf50B82e08eaf454`
+- **Markets**:
   - cUSDT: `0x498823F094f6F2121CcB4e09371a57A96d619695`
   - cSIX: `0xC468dFD0C96691035B3b1A4CA152Cb64F0dbF64c`
   - cBORA: `0x7a937C07d49595282c711FBC613c881a83B9fDFD`
   - cMBX: `0xE321e20F0244500A194543B1EBD8604c02b8fA85`
   - cKAIA: `0x98Ab86C97Ebf33D28fc43464353014e8c9927aB3`
   - cStKAIA: `0x0BC926EF3856542134B06DCf53c86005b08B9625`
+
+#### DragonSwap V3
+- **Router**: `0xA324880f884036E3d21a09B90269E1aC57c7EC8a`
+- **Quoter V2**: `0x673d88960D320909af24db6eE7665aF223fec060`
+- **Factory**: `0x7431A23897ecA6913D5c81666345D39F27d946A4`
 
 ## API Response Format
 
@@ -291,3 +383,4 @@ For issues and questions:
 - Create an issue on GitHub
 - Check the documentation
 - Review the examples in `EXAMPLES.md`
+- Check `TESTING.md` for testing guidance

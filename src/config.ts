@@ -86,7 +86,9 @@ const getAccount = (): Account => {
         const privateKey = generatePrivateKey();
         return privateKeyToAccount(privateKey);
     } else {
-        return privateKeyToAccount(`0x${(args?.wallet_private_key)}` as Address);
+        const privateKey = args.wallet_private_key;
+        const formattedPrivateKey = privateKey.startsWith('0x') ? privateKey : `0x${privateKey}`;
+        return privateKeyToAccount(formattedPrivateKey as Address);
     }
 }
 

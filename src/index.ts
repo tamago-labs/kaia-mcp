@@ -9,10 +9,25 @@ import { z } from 'zod';
 import { WalletAgent } from './agent/wallet';
 import { validateEnvironment, agentMode, account } from './config';
 import { KaiaWalletTools, KaiaReadOnlyTools } from './mcp';
-import { DragonSwapTools, DragonSwapReadOnlyTools, DragonSwapToolHandlers, dragonSwapRouter } from './mcp/dragonswap';
+import { DragonSwapTools, DragonSwapReadOnlyTools, DragonSwapToolHandlers, createDragonSwapRouter, initializeDragonSwapTools, IDragonSwapRouter } from './mcp/dragonswap';
 
 // Validate environment configuration
 validateEnvironment();
+
+// Helper function to get private key from command line arguments
+const getPrivateKey = (): string | undefined => {
+    const args = process.argv.reduce((args: any, arg: any) => {
+        if (arg.slice(0, 2) === "--") {
+            const longArg = arg.split("=");
+            const longArgFlag = longArg[0].slice(2);
+            const longArgValue = longArg.length > 1 ? longArg[1] : true;
+            args[longArgFlag] = longArgValue;
+        }
+        return args;
+    }, {});
+    
+    return args.wallet_private_key;
+};
 
 // Create server instance
 const server = new Server(
@@ -27,8 +42,15 @@ const server = new Server(
   }
 );
 
-// Create wallet agent instance
-const walletAgent = new WalletAgent();
+// Create wallet agent instance with private key if available
+const privateKey = getPrivateKey();
+const walletAgent = new WalletAgent(privateKey);
+
+// Initialize DragonSwap router with the same private key
+const dragonSwapRouter: IDragonSwapRouter = createDragonSwapRouter(privateKey);
+
+// Initialize DragonSwap tools with the router instance
+initializeDragonSwapTools(dragonSwapRouter);
 
 // List available tools based on agent mode
 server.setRequestHandler(ListToolsRequestSchema, async () => {

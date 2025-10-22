@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
-import { dragonSwapRouter } from "../../dragonswap/router";
+import { dragonSwapRouter, IDragonSwapRouter } from "../../dragonswap/router";
 import { TOKENS } from "../../dragonswap/config";
 import { publicClient } from "../../config";
 import { formatUnits, Hex } from "viem";
@@ -51,8 +51,11 @@ export const ExecuteSwapTool: Tool = {
   }
 };
 
-export async function handleExecuteSwap(args: any) {
+export async function handleExecuteSwap(args: any, router?: IDragonSwapRouter) {
   try {
+    // Use provided router or fall back to imported one
+    const routerInstance = router || dragonSwapRouter;
+    
     // Parse token symbols to addresses
     const tokenIn = parseTokenSymbol(args.tokenIn);
     const tokenOut = parseTokenSymbol(args.tokenOut);
@@ -67,11 +70,11 @@ export async function handleExecuteSwap(args: any) {
     }
 
     // Get pre-swap balances
-    const balanceBefore = await dragonSwapRouter.getTokenBalance(tokenIn);
-    const balanceOutBefore = await dragonSwapRouter.getTokenBalance(tokenOut);
+    const balanceBefore = await routerInstance.getTokenBalance(tokenIn);
+    const balanceOutBefore = await routerInstance.getTokenBalance(tokenOut);
 
     // Execute the swap
-    const txHash = await dragonSwapRouter.executeExactInputSwap({
+    const txHash = await routerInstance.executeExactInputSwap({
       tokenIn,
       tokenOut,
       amountIn: args.amountIn,
@@ -88,8 +91,8 @@ export async function handleExecuteSwap(args: any) {
     });
 
     // Get post-swap balances
-    const balanceAfter = await dragonSwapRouter.getTokenBalance(tokenIn);
-    const balanceOutAfter = await dragonSwapRouter.getTokenBalance(tokenOut);
+    const balanceAfter = await routerInstance.getTokenBalance(tokenIn);
+    const balanceOutAfter = await routerInstance.getTokenBalance(tokenOut);
 
     // Calculate actual amounts
     const actualAmountIn = parseFloat(balanceBefore) - parseFloat(balanceAfter);

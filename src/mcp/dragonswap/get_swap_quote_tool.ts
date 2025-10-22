@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
-import { dragonSwapRouter } from "../../dragonswap/router";
+import { dragonSwapRouter, IDragonSwapRouter } from "../../dragonswap/router";
 import { TOKENS } from "../../dragonswap/config";
 import { formatUnits } from "viem";
 
@@ -40,14 +40,17 @@ export const GetSwapQuoteTool: Tool = {
   }
 };
 
-export async function handleGetSwapQuote(args: any) {
+export async function handleGetSwapQuote(args: any, router?: IDragonSwapRouter) {
   try {
+    // Use provided router or fall back to imported one
+    const routerInstance = router || dragonSwapRouter;
+    
     // Parse token symbols to addresses
     const tokenIn = parseTokenSymbol(args.tokenIn);
     const tokenOut = parseTokenSymbol(args.tokenOut);
 
     // Get swap quote
-    const quote = await dragonSwapRouter.getQuoteExactInput({
+    const quote = await routerInstance.getQuoteExactInput({
       tokenIn,
       tokenOut,
       amountIn: args.amountIn,
@@ -56,8 +59,8 @@ export async function handleGetSwapQuote(args: any) {
     });
 
     // Get current balances for context
-    const balanceIn = await dragonSwapRouter.getTokenBalance(tokenIn);
-    const balanceOut = await dragonSwapRouter.getTokenBalance(tokenOut);
+    const balanceIn = await routerInstance.getTokenBalance(tokenIn);
+    const balanceOut = await routerInstance.getTokenBalance(tokenOut);
 
     return {
       success: true,

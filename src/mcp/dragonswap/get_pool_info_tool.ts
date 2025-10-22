@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
-import { dragonSwapRouter } from "../../dragonswap/router";
+import { dragonSwapRouter, IDragonSwapRouter, PoolInfo } from "../../dragonswap/router";
 import { TOKENS, FEE_TIERS } from "../../dragonswap/config";
 import { formatUnits } from "viem";
 
@@ -31,8 +31,11 @@ export const GetPoolInfoTool: Tool = {
   }
 };
 
-export async function handleGetPoolInfo(args: any) {
+export async function handleGetPoolInfo(args: any, router?: IDragonSwapRouter) {
   try {
+    // Use provided router or fall back to imported one
+    const routerInstance = router || dragonSwapRouter;
+    
     // Parse token symbols to addresses
     const token0 = parseTokenSymbol(args.token0);
     const token1 = parseTokenSymbol(args.token1);
@@ -40,11 +43,11 @@ export async function handleGetPoolInfo(args: any) {
     let pools;
     if (args.fee) {
       // Get specific pool
-      const pool = await dragonSwapRouter.getPoolInfo(token0, token1, args.fee);
+      const pool = await routerInstance.getPoolInfo(token0, token1, args.fee);
       pools = pool ? [pool] : [];
     } else {
       // Get all pools for the pair
-      pools = await dragonSwapRouter.getAllPools(token0, token1);
+      pools = await routerInstance.getAllPools(token0, token1);
     }
 
     if (pools.length === 0) {
@@ -57,11 +60,11 @@ export async function handleGetPoolInfo(args: any) {
 
     // Get additional pool data
     const enrichedPools = await Promise.all(
-      pools.map(async (pool) => {
+      pools.map(async (pool: PoolInfo) => {
         try {
           // Get token balances for the pool
-          const balance0 = await dragonSwapRouter.getTokenBalance(pool.token0, pool.address);
-          const balance1 = await dragonSwapRouter.getTokenBalance(pool.token1, pool.address);
+          const balance0 = await routerInstance.getTokenBalance(pool.token0, pool.address);
+          const balance1 = await routerInstance.getTokenBalance(pool.token1, pool.address);
 
           // Calculate price from sqrtPriceX96 if available
           let price0 = "0";

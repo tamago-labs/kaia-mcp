@@ -1,9 +1,24 @@
-import { publicClient, walletClient, account } from '../config';
+import { publicClient, networkInfo } from '../config';
+import { createWalletClient, http, WalletClient, Account } from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
+import { kaia } from 'viem/chains';
 import { DRAGONSWAP_CONTRACTS, TOKENS, FEE_TIERS, DEFAULT_SLIPPAGE, DEFAULT_DEADLINE } from './config';
 import { Address, parseUnits, formatUnits, Hex, encodeFunctionData, maxUint256 } from 'viem';
 import SwapRouterABI from './contracts/abi/SwapRouter.json';
 import QuoterV2ABI from './contracts/abi/QuoterV2.json';
 import { ERC20_ABI } from '../contracts/erc20';
+
+/**
+ * Public interface for DragonSwap router operations
+ * Only exposes methods that should be publicly accessible
+ */
+export interface IDragonSwapRouter {
+  getQuoteExactInput(params: SwapParams): Promise<SwapQuote>;
+  executeExactInputSwap(params: SwapParams): Promise<`0x${string}`>;
+  getPoolInfo(token0: Address, token1: Address, fee: number): Promise<PoolInfo | null>;
+  getAllPools(token0: Address, token1: Address): Promise<PoolInfo[]>;
+  getTokenBalance(token: Address, walletAddress?: Address): Promise<string>;
+}
 
 export interface SwapParams {
   tokenIn: Address;
@@ -47,8 +62,25 @@ export interface PoolInfo {
 
 class DragonSwapRouter {
   private publicClient = publicClient;
-  private walletClient = walletClient;
-  private account = account;
+  private walletClient: WalletClient;
+  private account: Account;
+
+  constructor(privateKey?: string) {
+    if (privateKey) {
+      // Ensure private key is in correct hex format
+      const formattedPrivateKey = privateKey.startsWith('0x') ? privateKey : `0x${privateKey}`;
+      this.account = privateKeyToAccount(formattedPrivateKey as Address);
+      this.walletClient = createWalletClient({
+        account: this.account,
+        chain: kaia,
+        transport: http(networkInfo.rpcProviderUrl)
+      });
+    } else {
+      // Use the config account as fallback
+      this.account = (require('../config')).account;
+      this.walletClient = (require('../config')).walletClient;
+    }
+  }
 
   /**
    * Get a quote for an exact input swap
@@ -441,4 +473,10 @@ class DragonSwapRouter {
   }
 }
 
-export const dragonSwapRouter = new DragonSwapRouter();
+// Factory function to create DragonSwap router with private key
+export function createDragonSwapRouter(privateKey?: string): IDragonSwapRouter {
+  return new DragonSwapRouter(privateKey);
+}
+
+// Default export for backward compatibility (will be initialized from main index)
+export let dragonSwapRouter: IDragonSwapRouter;
