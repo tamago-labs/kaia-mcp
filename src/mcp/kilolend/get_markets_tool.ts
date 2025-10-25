@@ -5,18 +5,11 @@ import { type McpTool } from "../../types";
 export const GetMarketsTool: McpTool = {
     name: "kaia_get_lending_markets",
     description: "Get all lending markets with their current rates and statistics",
-    schema: {
-        private_key: z.string()
-            .optional()
-            .describe("Private key for wallet access (optional, only needed for enhanced features)")
-    },
+    schema: {},
     handler: async (agent: WalletAgent, input: Record<string, any>) => {
         try {
-            // Create a new WalletAgent with private key if provided
-            const walletAgent = input.private_key ? new WalletAgent(input.private_key) : agent;
-            
             // Use the getAllMarkets method which already fetches all market data
-            const markets = await walletAgent.getAllMarkets();
+            const markets = await agent.getAllMarkets();
 
             return {
                 status: "success",

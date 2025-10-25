@@ -10,21 +10,15 @@ export const SendNativeTokenTool: McpTool = {
         to_address: z.string()
             .describe("Recipient address"),
         amount: z.string()
-            .describe("Amount to send in KAIA"),
-        private_key: z.string()
-            .optional()
-            .describe("Private key for transaction (required for sending)")
+            .describe("Amount to send in KAIA")
     },
     handler: async (agent: WalletAgent, input: Record<string, any>) => {
         try {
-            // Create a new WalletAgent with private key for transactions
-            const walletAgent = input.private_key ? new WalletAgent(input.private_key) : agent;
-            
-            if (!walletAgent.isTransactionMode()) {
-                throw new Error('Transaction mode required. Provide private_key parameter.');
+            if (!agent.isTransactionMode()) {
+                throw new Error('Transaction mode required. Configure private key in environment to enable transactions.');
             }
             
-            const txHash = await walletAgent.sendNativeToken(
+            const txHash = await agent.sendNativeToken(
                 input.to_address as any,
                 input.amount
             );

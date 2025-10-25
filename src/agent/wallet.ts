@@ -30,7 +30,15 @@ export class WalletAgent {
   constructor(privateKey?: string) {
     if (privateKey) {
       // Initialize wallet for transaction capabilities
-      this.account = privateKeyToAccount(privateKey as Address);
+      // Ensure private key is properly formatted as hex string
+      const formattedPrivateKey = privateKey.startsWith('0x') ? privateKey : `0x${privateKey}`;
+      
+      // Validate private key format
+      if (!/^0x[0-9a-fA-F]{64}$/.test(formattedPrivateKey)) {
+        throw new Error(`Invalid private key format. Expected 64 hex characters (32 bytes), got: ${formattedPrivateKey.length - 2} characters`);
+      }
+      
+      this.account = privateKeyToAccount(formattedPrivateKey as `0x${string}`);
       this.walletClient = createWalletClient({
         account: this.account,
         chain: kaia,
@@ -350,6 +358,102 @@ export class WalletAgent {
     }
   }
 
+  // ===== ALLOWANCE AND MARKET ENTRY METHODS =====
+
+  async checkAllowance(tokenSymbol: string, spenderAddress: Address): Promise<string> {
+    const tokenAddress = TOKEN_ADDRESSES[tokenSymbol as keyof typeof TOKEN_ADDRESSES];
+    if (!tokenAddress) {
+      throw new ValidationError(`Token ${tokenSymbol} not supported`);
+    }
+
+    if (tokenSymbol === 'KAIA') {
+      return "115792089237316195423570985008687907853269984665640564039457584007913129639935"; // Max uint256 for native token
+    }
+
+    try {
+      const allowance = await publicClient.readContract({
+        address: tokenAddress,
+        abi: ERC20_ABI,
+        functionName: 'allowance',
+        args: [this.getAddress()!, spenderAddress]
+      }) as bigint;
+
+      return allowance.toString();
+    } catch (error: any) {
+      throw new Error(`Failed to check allowance: ${error.message}`);
+    }
+  }
+
+  async approveToken(tokenSymbol: string, spenderAddress: Address, amount?: string): Promise<string> {
+    this.requireTransactionMode();
+    
+    const tokenAddress = TOKEN_ADDRESSES[tokenSymbol as keyof typeof TOKEN_ADDRESSES];
+    if (!tokenAddress) {
+      throw new ValidationError(`Token ${tokenSymbol} not supported`);
+    }
+
+    if (tokenSymbol === 'KAIA') {
+      throw new ValidationError('KAIA is native token and does not require approval');
+    }
+
+    try {
+      const amountWei = amount ? parseUnits(amount, 18) : 
+        BigInt('115792089237316195423570985008687907853269984665640564039457584007913129639935'); // Max uint256
+      
+      const txHash = await this.walletClient!.writeContract({
+        address: tokenAddress,
+        abi: ERC20_ABI,
+        functionName: 'approve',
+        args: [spenderAddress, amountWei],
+        account: this.account!,
+        chain: kaia
+      });
+
+      return txHash;
+    } catch (error) {
+      throw handleContractError(error);
+    }
+  }
+
+  async checkMarketMembership(cTokenAddress: Address): Promise<boolean> {
+    const userAddress = this.getAddress();
+    if (!userAddress) {
+      throw new Error('Wallet not initialized');
+    }
+
+    try {
+      const assetsIn = await publicClient.readContract({
+        address: COMPTROLLER_ADDRESS,
+        abi: COMPTROLLER_ABI,
+        functionName: 'getAssetsIn',
+        args: [userAddress]
+      }) as Address[];
+
+      return assetsIn.includes(cTokenAddress);
+    } catch (error: any) {
+      throw new Error(`Failed to check market membership: ${error.message}`);
+    }
+  }
+
+  async enterMarkets(cTokenAddresses: Address[]): Promise<string> {
+    this.requireTransactionMode();
+    
+    try {
+      const txHash = await this.walletClient!.writeContract({
+        address: COMPTROLLER_ADDRESS,
+        abi: COMPTROLLER_ABI,
+        functionName: 'enterMarkets',
+        args: [cTokenAddresses],
+        account: this.account!,
+        chain: kaia
+      });
+
+      return txHash;
+    } catch (error) {
+      throw handleContractError(error);
+    }
+  }
+
   // ===== TRANSACTION METHODS =====
 
   async sendNativeToken(to: Address, amount: string): Promise<string> {
@@ -422,6 +526,22 @@ export class WalletAgent {
     }
 
     try {
+      // Check if user is in the market, if not, enter market
+      const isInMarket = await this.checkMarketMembership(cTokenAddress);
+      if (!isInMarket) {
+        await this.enterMarkets([cTokenAddress]);
+      }
+
+      // For ERC20 tokens, check and handle allowance
+      if (tokenSymbol !== 'KAIA') {
+        const currentAllowance = await this.checkAllowance(tokenSymbol, cTokenAddress);
+        const amountWei = parseUnits(amount, 18);
+        
+        if (BigInt(currentAllowance) < amountWei) {
+          await this.approveToken(tokenSymbol, cTokenAddress);
+        }
+      }
+
       const amountWei = parseUnits(amount, 18);
       
       const txHash = await this.walletClient!.writeContract({
@@ -474,6 +594,17 @@ export class WalletAgent {
     }
 
     try {
+      // For ERC20 tokens, check and handle allowance
+      if (tokenSymbol !== 'KAIA') {
+        const currentAllowance = await this.checkAllowance(tokenSymbol, cTokenAddress);
+        const amountWei = amount ? parseUnits(amount, 18) : 
+          BigInt('115792089237316195423570985008687907853269984665640564039457584007913129639935');
+        
+        if (BigInt(currentAllowance) < amountWei) {
+          await this.approveToken(tokenSymbol, cTokenAddress);
+        }
+      }
+
       const amountWei = amount ? parseUnits(amount, 18) : 
         BigInt('115792089237316195423570985008687907853269984665640564039457584007913129639935');
       
@@ -540,7 +671,6 @@ export class WalletAgent {
             case 'STAKED_KAIA':
               prices['STAKED_KAIA'] = item.price;
               break;
-            // Note: USDT and SIX are not in the API response, use fallbacks
             case 'USDT':
               prices['USDT'] = item.price;
               break;

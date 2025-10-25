@@ -12,21 +12,15 @@ export const SendERC20TokenTool: McpTool = {
         to_address: z.string()
             .describe("Recipient address"),
         amount: z.string()
-            .describe("Amount to send"),
-        private_key: z.string()
-            .optional()
-            .describe("Private key for transaction (required for sending)")
+            .describe("Amount to send")
     },
     handler: async (agent: WalletAgent, input: Record<string, any>) => {
         try {
-            // Create a new WalletAgent with private key for transactions
-            const walletAgent = input.private_key ? new WalletAgent(input.private_key) : agent;
-            
-            if (!walletAgent.isTransactionMode()) {
-                throw new Error('Transaction mode required. Provide private_key parameter.');
+            if (!agent.isTransactionMode()) {
+                throw new Error('Transaction mode required. Configure private key in environment to enable transactions.');
             }
             
-            const txHash = await walletAgent.sendERC20Token(
+            const txHash = await agent.sendERC20Token(
                 input.token_symbol,
                 input.to_address as any,
                 input.amount

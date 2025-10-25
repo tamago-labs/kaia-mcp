@@ -7,27 +7,22 @@ export const GetAccountLiquidityTool: McpTool = {
     description: "Check account liquidity, health factor, and borrowing capacity",
     schema: {
         account_address: z.string()
-            .describe("Account address to check (optional, defaults to current wallet)"),
-        private_key: z.string()
             .optional()
-            .describe("Private key for wallet access (optional, only needed if no default wallet)")
+            .describe("Account address to check (optional, defaults to current wallet)")
     },
     handler: async (agent: WalletAgent, input: Record<string, any>) => {
         try {
-            // Create a new WalletAgent with private key if provided
-            const walletAgent = input.private_key ? new WalletAgent(input.private_key) : agent;
-            
             // Get the account address - use provided address or get from wallet
             let accountAddress = input.account_address;
             if (!accountAddress) {
-                const walletAddress = walletAgent.getAddress();
+                const walletAddress = agent.getAddress();
                 if (!walletAddress) {
-                    throw new Error('No account address provided and no wallet available. Please provide account_address or private_key.');
+                    throw new Error('No account address provided and no wallet available. Please provide account_address or configure private key in environment.');
                 }
                 accountAddress = walletAddress;
             }
             
-            const liquidityInfo = await walletAgent.getAccountLiquidity(accountAddress as any);
+            const liquidityInfo = await agent.getAccountLiquidity(accountAddress as any);
             
             const liquidity = parseFloat(liquidityInfo.liquidity) / 1e18;
             const shortfall = parseFloat(liquidityInfo.shortfall) / 1e18;

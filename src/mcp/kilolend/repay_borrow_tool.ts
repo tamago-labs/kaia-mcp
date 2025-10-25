@@ -11,21 +11,15 @@ export const RepayBorrowTool: McpTool = {
             .describe("Token symbol to repay (e.g., KAIA, USDT, BORA, SIX, MBX, STAKED_KAIA)"),
         amount: z.string()
             .optional()
-            .describe("Amount to repay (optional, defaults to full amount)"),
-        private_key: z.string()
-            .optional()
-            .describe("Private key for transaction (required for repayment)")
+            .describe("Amount to repay (optional, defaults to full amount)")
     },
     handler: async (agent: WalletAgent, input: Record<string, any>) => {
         try {
-            // Create a new WalletAgent with private key for transactions
-            const walletAgent = input.private_key ? new WalletAgent(input.private_key) : agent;
-            
-            if (!walletAgent.isTransactionMode()) {
-                throw new Error('Transaction mode required. Provide private_key parameter.');
+            if (!agent.isTransactionMode()) {
+                throw new Error('Transaction mode required. Configure private key in environment to enable transactions.');
             }
             
-            const txHash = await walletAgent.repayBorrow(
+            const txHash = await agent.repayBorrow(
                 input.token_symbol,
                 input.amount
             );

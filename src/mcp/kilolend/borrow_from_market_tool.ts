@@ -10,21 +10,15 @@ export const BorrowFromMarketTool: McpTool = {
         token_symbol: z.string()
             .describe("Token symbol to borrow (e.g., KAIA, USDT, BORA, SIX, MBX, STAKED_KAIA)"),
         amount: z.string()
-            .describe("Amount to borrow"),
-        private_key: z.string()
-            .optional()
-            .describe("Private key for transaction (required for borrowing)")
+            .describe("Amount to borrow")
     },
     handler: async (agent: WalletAgent, input: Record<string, any>) => {
         try {
-            // Create a new WalletAgent with private key for transactions
-            const walletAgent = input.private_key ? new WalletAgent(input.private_key) : agent;
-            
-            if (!walletAgent.isTransactionMode()) {
-                throw new Error('Transaction mode required. Provide private_key parameter.');
+            if (!agent.isTransactionMode()) {
+                throw new Error('Transaction mode required. Configure private key in environment to enable transactions.');
             }
             
-            const txHash = await walletAgent.borrowFromMarket(
+            const txHash = await agent.borrowFromMarket(
                 input.token_symbol,
                 input.amount
             );

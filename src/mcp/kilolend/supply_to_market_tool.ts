@@ -10,21 +10,15 @@ export const SupplyToMarketTool: McpTool = {
         token_symbol: z.string()
             .describe("Token symbol to supply (e.g., KAIA, USDT, BORA, SIX, MBX, STAKED_KAIA)"),
         amount: z.string()
-            .describe("Amount to supply"),
-        private_key: z.string()
-            .optional()
-            .describe("Private key for transaction (required for supplying)")
+            .describe("Amount to supply")
     },
     handler: async (agent: WalletAgent, input: Record<string, any>) => {
         try {
-            // Create a new WalletAgent with private key for transactions
-            const walletAgent = input.private_key ? new WalletAgent(input.private_key) : agent;
-            
-            if (!walletAgent.isTransactionMode()) {
-                throw new Error('Transaction mode required. Provide private_key parameter.');
+            if (!agent.isTransactionMode()) {
+                throw new Error('Transaction mode required. Configure private key in environment to enable transactions.');
             }
             
-            const txHash = await walletAgent.supplyToMarket(
+            const txHash = await agent.supplyToMarket(
                 input.token_symbol,
                 input.amount
             );

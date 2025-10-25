@@ -5,17 +5,10 @@ import { type McpTool } from "../../types";
 export const GetWalletInfoTool: McpTool = {
     name: "kaia_get_wallet_info",
     description: "Get wallet address and basic account information",
-    schema: {
-        private_key: z.string()
-            .optional()
-            .describe("Private key for wallet access (optional, only needed for detailed wallet info)")
-    },
+    schema: {},
     handler: async (agent: WalletAgent, input: Record<string, any>) => {
         try {
-            // Create a new WalletAgent with private key if provided
-            const walletAgent = input.private_key ? new WalletAgent(input.private_key) : agent;
-            
-            const walletInfo = await walletAgent.getWalletInfo();
+            const walletInfo = await agent.getWalletInfo();
             const nativeCurrency = "KAIA"; // Fixed for KAIA network
             const balanceInNative = parseFloat(walletInfo.nativeBalance.split(' ')[0]);
 

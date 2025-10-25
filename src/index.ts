@@ -1,188 +1,133 @@
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import 'dotenv/config';
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-  Tool,
-} from "@modelcontextprotocol/sdk/types.js";
-import { z } from 'zod';
 import { WalletAgent } from './agent/wallet';
 import { validateEnvironment, agentMode, account, getEnvironmentConfig } from './config';
 import { KaiaWalletTools, KaiaReadOnlyTools } from './mcp';
-import { DragonSwapTools, DragonSwapReadOnlyTools, DragonSwapToolHandlers, createDragonSwapRouter, initializeDragonSwapTools, IDragonSwapRouter } from './mcp/dragonswap';
 
-// Validate environment configuration
-validateEnvironment();
+// Export WalletAgent for external use
+export { WalletAgent };
 
-// Get private key from environment configuration
-const getPrivateKey = (): string | undefined => {
-    const config = getEnvironmentConfig();
-    return config.privateKey;
-};
+/**
+ * Creates an MCP server for KAIA blockchain operations
+ * Provides comprehensive wallet, lending, and DEX functionality
+ */
 
-// Create server instance
-const server = new Server(
-  {
-    name: "kaia-mcp",
-    version: "1.0.0",
-  },
-  {
-    capabilities: {
-      tools: {},
-    },
-  }
-);
+function createKaiaMcpServer(agent: WalletAgent) {
 
-// Create wallet agent instance with private key if available
-const privateKey = getPrivateKey();
-const walletAgent = new WalletAgent(privateKey);
+    // Create MCP server instance
+    const server = new McpServer({
+        name: "kaia-mcp",
+        version: "1.0.0"
+    });
 
-// Initialize DragonSwap router with the same private key
-const dragonSwapRouter: IDragonSwapRouter = createDragonSwapRouter(privateKey);
-
-// Initialize DragonSwap tools with the router instance
-initializeDragonSwapTools(dragonSwapRouter);
-
-// List available tools based on agent mode
-server.setRequestHandler(ListToolsRequestSchema, async () => {
-  const kaiaTools = agentMode === 'transaction' ? KaiaWalletTools : KaiaReadOnlyTools;
-  const dragonSwapTools = agentMode === 'transaction' ? DragonSwapTools : DragonSwapReadOnlyTools;
-  
-  // Combine all tools
-  const allTools = { ...kaiaTools, ...dragonSwapTools };
-  
-  const toolList: Tool[] = Object.values(allTools).map((tool) => {
-    // Handle both old format (schema) and new format (inputSchema)
-    let inputSchema: any;
-    
-    if ('inputSchema' in tool) {
-      inputSchema = tool.inputSchema;
-    } else {
-      // Convert zod schema to input schema format
-      const properties: any = {};
-      const required: string[] = [];
-      
-      Object.entries(tool.schema).forEach(([key, schema]: [string, any]) => {
-        properties[key] = {
-          type: "string",
-          description: schema._def.description || key
-        };
-        
-        if (!schema._def.optional) {
-          required.push(key);
-        }
-      });
-      
-      inputSchema = {
-        type: "object",
-        properties,
-        required
-      };
-    }
-    
-    return {
-      name: tool.name,
-      description: tool.description,
-      inputSchema,
-    };
-  });
-
-  return {
-    tools: toolList,
-  };
-});
-
-// Handle tool calls
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name, arguments: args } = request.params;
-  
-  try {
     // Get the appropriate tool sets based on agent mode
     const kaiaTools = agentMode === 'transaction' ? KaiaWalletTools : KaiaReadOnlyTools;
-    const dragonSwapTools = agentMode === 'transaction' ? DragonSwapTools : DragonSwapReadOnlyTools;
-    
+
     // Combine all tools
-    const allTools = { ...kaiaTools, ...dragonSwapTools };
-    const tool = allTools[name as keyof typeof allTools];
+    const allTools = { ...kaiaTools };
 
-    if (!tool) {
-      throw new Error(`Unknown tool: ${name}`);
+
+    // Register all tools
+    for (const [toolKey, tool] of Object.entries(allTools)) {
+        server.tool(tool.name, tool.description, tool.schema, async (params: any): Promise<any> => {
+            try {
+                // Execute the handler with the agent and params
+                const result = await tool.handler(agent, params);
+
+                // Format the result as MCP tool response
+                return {
+                    content: [
+                        {
+                            type: "text",
+                            text: JSON.stringify(result, null, 2),
+                        },
+                    ],
+                };
+            } catch (error) {
+                console.error(`Tool execution error [${tool.name}]:`, error);
+                // Handle errors in MCP format
+                return {
+                    isError: true,
+                    content: [
+                        {
+                            type: "text",
+                            text: error instanceof Error
+                                ? error.message
+                                : "Unknown error occurred",
+                        },
+                    ],
+                };
+            }
+        });
     }
 
-    let result: any;
+    const toolCount = Object.keys(allTools).length;
+    console.error(`✅ Registered ${toolCount} KAIA tools`);
+    return server; 
+}
 
-    // Handle different tool types
-    if ('handler' in tool && typeof tool.handler === 'function') {
-      // Kaia wallet tools (old format)
-      result = await (tool.handler as any)(walletAgent, args || {});
-    } else {
-      // DragonSwap tools (new format)
-      const handler = DragonSwapToolHandlers[name as keyof typeof DragonSwapToolHandlers];
-      if (!handler) {
-        throw new Error(`No handler found for tool: ${name}`);
-      }
-      result = await handler(args || {});
-    }
-
-    return {
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify(result, null, 2),
-        },
-      ],
-    };
-  } catch (error: any) {
-    console.error(`Error executing tool ${name}:`, error);
-    
-    return {
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify({
-            status: "error",
-            message: error.message || "Unknown error occurred",
-            tool: name,
-            arguments: args
-          }, null, 2),
-        },
-      ],
-      isError: true,
-    };
-  }
-});
-
-// Start the server
 async function main() {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  
-  console.error(`🚀 KAIA-MCP Server started`);
-  console.error(`📍 Mode: ${agentMode}`); 
-  console.error(`📍 Account: ${account.address}`);
-  const totalTools = Object.keys(agentMode === 'transaction' ? KaiaWalletTools : KaiaReadOnlyTools).length + 
-                    Object.keys(agentMode === 'transaction' ? DragonSwapTools : DragonSwapReadOnlyTools).length;
-  console.error(`📍 Available tools: ${totalTools}`);
+    try {
+        console.error("🔍 Starting KAIA MCP Server...");
+
+        // Validate environment before proceeding
+        validateEnvironment();
+        const environment = getEnvironmentConfig();
+
+        // Create wallet agent instance with private key if available
+        const privateKey = environment.privateKey;
+        const walletAgent = new WalletAgent(privateKey);
+
+        // Initialize DragonSwap router with the same private key
+        // const dragonSwapRouter: IDragonSwapRouter = createDragonSwapRouter(privateKey);
+
+        // Initialize DragonSwap tools with the router instance
+        // initializeDragonSwapTools(dragonSwapRouter);
+
+        // Create and start MCP server
+        const server = createKaiaMcpServer(walletAgent);
+        const transport = new StdioServerTransport();
+        await server.connect(transport);
+
+        console.error("✅ KAIA MCP Server is running!");
+        console.error(`📍 Mode: ${agentMode}`);
+        console.error(`📍 Account: ${account.address}`);
+
+        const totalTools = Object.keys(agentMode === 'transaction' ? KaiaWalletTools : KaiaReadOnlyTools).length + 0
+        // Object.keys(agentMode === 'transaction' ? DragonSwapTools : DragonSwapReadOnlyTools).length;
+        console.error(`📍 Available tools: ${totalTools}`);
+
+        console.error("🔧 Available capabilities:");
+        if (agentMode === 'transaction') {
+            console.error("   • Wallet operations (send, supply, borrow, repay)");
+            console.error("   • Transaction capabilities with private key");
+        } else {
+            console.error("   • Read-only wallet information");
+            console.error("   • Market data and analytics");
+        }
+        console.error("   • Lending market information");
+        console.error("   • Account liquidity and health checks");
+        console.error("   • Protocol statistics");
+        console.error("   • DragonSwap DEX operations");
+        console.error("🌐 Network: KAIA (Klaytn)");
+
+    } catch (error) {
+        console.error('❌ Error starting KAIA MCP server:', error);
+        process.exit(1);
+    }
 }
 
 // Handle shutdown gracefully
 process.on('SIGINT', async () => {
-  console.error('\n🛑 Shutting down KAIA-MCP Server...');
-  await walletAgent.disconnect();
-  process.exit(0);
+    console.error('\n🛑 Shutting down KAIA MCP Server...');
+    process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
-  console.error('\n🛑 Shutting down KAIA-MCP Server...');
-  await walletAgent.disconnect();
-  process.exit(0);
+    console.error('\n🛑 Shutting down KAIA MCP Server...');
+    process.exit(0);
 });
 
 // Start the server
-main().catch((error) => {
-  console.error('Failed to start server:', error);
-  process.exit(1);
-});
-
-// Export dragonSwapRouter for external access
-export { dragonSwapRouter };
+main();
