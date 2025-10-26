@@ -13,6 +13,7 @@ import {
   TOKEN_ADDRESSES
 } from '../contracts/ctoken';
 import { ERC20_ABI } from '../contracts/erc20';
+import { WKAIA_ADDRESS, WKAIA_ABI } from '../contracts/wkaia';
 import {
   TransactionError,
   InsufficientBalanceError,
@@ -99,33 +100,72 @@ export class WalletAgent {
       const prices = await this.fetchPrices();
       const tokens = [];
 
-      // Get token balances for major tokens
-      for (const [symbol, address] of Object.entries(TOKEN_ADDRESSES)) {
+      // Comprehensive token list including WKAIA and major tokens from config
+      const comprehensiveTokenList = {
+        ...TOKEN_ADDRESSES, // KiloLend tokens
+        'WKAIA': SWAP_TOKENS.WKAIA, // Add WKAIA from swap tokens
+        'RKLAY': SWAP_TOKENS.RKLAY, // Add RKLAY
+        'WETH': SWAP_TOKENS.WETH, // Add WETH
+        'BTCB': SWAP_TOKENS.BTCB, // Add BTCB
+      };
+
+      // Get token balances for all major tokens
+      for (const [symbol, address] of Object.entries(comprehensiveTokenList)) {
         try {
-          const tokenBalance = await this.getTokenBalance(address, this.account.address);
-          const price = prices[symbol] || 0;
-          const balanceFormatted = Number(tokenBalance) / 1e18;
+          let tokenBalance: bigint;
+          let decimals: number;
+          let price = prices[symbol] || 0;
+
+          // Handle native KAIA separately
+          if (symbol === 'KAIA') {
+            tokenBalance = balance;
+            decimals = 18;
+          } else {
+            tokenBalance = await this.getTokenBalance(address, this.account.address);
+            decimals = await this.getTokenDecimals(address);
+          }
+
+          // Get proper price for tokens
+          if (symbol === 'WKAIA') {
+            price = prices.KAIA || 0; // WKAIA price should track KAIA
+          } else if (symbol === 'WETH' || symbol === 'ETH') {
+            price = prices.ETH || 0;
+          } else if (symbol === 'BTCB') {
+            price = prices.BTC || 0;
+          }
+
+          const balanceFormatted = Number(tokenBalance) / Math.pow(10, decimals);
           const balanceUSD = balanceFormatted * price;
 
-          if (balanceUSD > 0.01) { // Only show tokens with meaningful value
+          // Show tokens with meaningful value or non-zero balance
+          if (balanceUSD > 0.01 || balanceFormatted > 0) {
             tokens.push({
               symbol,
               address,
               balance: balanceFormatted.toString(),
               balanceUSD: balanceUSD.toFixed(2),
-              price
+              price,
+              decimals
             });
           }
         } catch (error) {
-          // Skip tokens that fail to load
+          // Skip tokens that fail to load but log for debugging
+          console.warn(`Failed to load balance for ${symbol}:`, error);
         }
       }
+
+      // Sort tokens by USD value (highest first)
+      tokens.sort((a, b) => parseFloat(b.balanceUSD) - parseFloat(a.balanceUSD));
+
+      // Calculate total portfolio value
+      const totalPortfolioUSD = tokens.reduce((sum, token) => sum + parseFloat(token.balanceUSD), 0);
 
       return {
         address: this.account.address,
         nativeBalance: formatTokenAmount(balance, 'KAIA'),
         nativeBalanceUSD: (Number(balance) / 1e18 * (prices.KAIA || 0)).toFixed(2),
         tokens,
+        totalPortfolioUSD: totalPortfolioUSD.toFixed(2),
         network: {
           chainId: networkInfo.chainId,
           name: 'KAIA',
@@ -1203,6 +1243,45 @@ export class WalletAgent {
     }
   }
 
+  private async getTokenDecimals(tokenAddress: Address): Promise<number> {
+    // Check if it's a known token with predefined decimals
+    if (
+      tokenAddress === SWAP_TOKENS.KAIA ||
+      tokenAddress === SWAP_TOKENS.WKAIA ||
+      tokenAddress === SWAP_TOKENS.WKAI ||
+      tokenAddress === SWAP_TOKENS.BORA ||
+      tokenAddress === SWAP_TOKENS.SIX ||
+      tokenAddress === SWAP_TOKENS.MBX ||
+      tokenAddress === SWAP_TOKENS.STAKED_KAIA ||
+      tokenAddress === SWAP_TOKENS.STKAIA ||
+      tokenAddress === SWAP_TOKENS.RKLAY ||
+      tokenAddress === SWAP_TOKENS.WETH ||
+      tokenAddress === SWAP_TOKENS.ETH ||
+      tokenAddress === SWAP_TOKENS.BTCB
+    ) {
+      return 18;
+    }
+
+    if (
+      tokenAddress === SWAP_TOKENS.USDT ||
+      tokenAddress === SWAP_TOKENS.USDT_OFFICIAL ||
+      tokenAddress === SWAP_TOKENS.USDT_WORMHOLE
+    ) {
+      return 6;
+    }
+
+    try {
+      const decimals = await publicClient.readContract({
+        address: tokenAddress,
+        abi: ERC20_ABI,
+        functionName: 'decimals',
+      });
+      return Number(decimals);
+    } catch (error) {
+      return 18; // Default to 18 decimals
+    }
+  }
+
   private async fetchPrices(): Promise<Record<string, number>> {
     try {
       const response = await axios.get(apiConfig.priceUrl, { timeout: apiConfig.timeout });
@@ -1265,14 +1344,14 @@ export class WalletAgent {
       '0x98Ab86C97Ebf33D28fc43464353014e8c9927aB3': 'KAIA',
       '0x0BC926EF3856542134B06DCf53c86005b08B9625': 'STAKED_KAIA'
     };
-    return symbolMap[cTokenAddress] || 'UNKNOWN';
+    return symbolMap[cTokenAddress as string] || 'UNKNOWN';
   }
 
   private async getTokenPrice(symbol: string): Promise<number> {
     try {
       const prices = await this.fetchPrices();
       return prices[symbol] || 0;
-    } catch (error) {
+    } catch (error: any) {
       return 0;
     }
   }
@@ -1422,6 +1501,94 @@ export class WalletAgent {
       return 'large';      // $1,000 - $10,000 USD equivalent
     } else {
       return 'whale';      // > $10,000 USD equivalent
+    }
+  }
+
+  // ===== WKAIA WRAP/UNWRAP METHODS =====
+
+  async wrapKaia(amount: string): Promise<string> {
+    this.requireTransactionMode();
+
+    try {
+      const amountWei = parseUnits(amount, 18);
+
+      // Check if user has sufficient KAIA balance
+      const balance = await publicClient.getBalance({
+        address: this.getAddress()!
+      });
+
+      if (balance < amountWei) {
+        throw new InsufficientBalanceError('KAIA', amount, balance.toString());
+      }
+
+      // Call deposit function on WKAIA contract
+      const txHash = await this.walletClient!.writeContract({
+        address: WKAIA_ADDRESS,
+        abi: WKAIA_ABI,
+        functionName: 'deposit',
+        args: [],
+        value: amountWei,
+        account: this.account!,
+        chain: kaia
+      });
+
+      return txHash;
+    } catch (error) {
+      throw handleContractError(error);
+    }
+  }
+
+  async unwrapKaia(amount: string): Promise<string> {
+    this.requireTransactionMode();
+
+    try {
+      const amountWei = parseUnits(amount, 18);
+
+      // Check if user has sufficient WKAIA balance
+      const wkaiaBalance = await publicClient.readContract({
+        address: WKAIA_ADDRESS,
+        abi: WKAIA_ABI,
+        functionName: 'balanceOf',
+        args: [this.getAddress()!]
+      }) as bigint;
+
+      if (wkaiaBalance < amountWei) {
+        throw new InsufficientBalanceError('WKAIA', amount, wkaiaBalance.toString());
+      }
+
+      // Call withdraw function on WKAIA contract
+      const txHash = await this.walletClient!.writeContract({
+        address: WKAIA_ADDRESS,
+        abi: WKAIA_ABI,
+        functionName: 'withdraw',
+        args: [amountWei],
+        account: this.account!,
+        chain: kaia
+      });
+
+      return txHash;
+    } catch (error) {
+      throw handleContractError(error);
+    }
+  }
+
+  async getWkaiaBalance(accountAddress?: Address): Promise<string> {
+    const address = accountAddress || this.getAddress();
+    if (!address) {
+      throw new Error('No address provided and wallet not initialized');
+    }
+
+    try {
+      const balance = await publicClient.readContract({
+        address: WKAIA_ADDRESS,
+        abi: WKAIA_ABI,
+        functionName: 'balanceOf',
+        args: [address]
+      }) as bigint;
+
+      return formatUnits(balance, 18);
+    } catch (error: any) {
+      throw new Error(`Failed to get WKAIA balance: ${error.message}`);
     }
   }
 }
