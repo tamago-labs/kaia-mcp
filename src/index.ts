@@ -27,7 +27,6 @@ function createKaiaMcpServer(agent: WalletAgent) {
     // Combine all tools
     const allTools = { ...kaiaTools };
 
-
     // Register all tools
     for (const [toolKey, tool] of Object.entries(allTools)) {
         server.tool(tool.name, tool.description, tool.schema, async (params: any): Promise<any> => {

@@ -1,143 +1,112 @@
-// Simple quote test using a more straightforward approach
-const { createPublicClient, http, parseUnits, formatUnits, getAddress } = require('viem');
-const { kaia } = require('viem/chains');
+/**
+ * Simple DragonSwap Quote Test
+ * Tests the quote functionality to identify issues
+ */
 
-// DragonSwap configuration
-const DRAGONSWAP_CONTRACTS = {
-  factory: "0x7431A23897ecA6913D5c81666345D39F27d946A4",
-  quoter: "0x5e4e4b0e6291c0a3360a4a3c7a6c3b4c4b5c6d7e" // Example quoter address
-};
+const { WalletAgent } = require('../dist/index.js');
 
 // Token addresses
 const TOKENS = {
-  USDT: "0x5C13E303a62Fc5DEdf5B52D66873f2E59fEdADC2",
-  USDC: "0x608792Deb376CCE1c9FA4D0E6B7b44f507CfFa6A"
+  WKAIA: "0x19aac5f612f524b754ca7e7c41cbfa2e981a4432",
+  USDT: "0xd077a400968890eacc75cdc901f0356c943e4fdb",
+  BORA: "0x02cbE46fB8A1F579254a9B485788f2D86Cad51aa",
+  SIX: "0xEf82b1C6A550e730D8283E1eDD4977cd01FAF435",
 };
 
-// Factory ABI
-const FACTORY_ABI = [
-  {
-    inputs: [
-      { internalType: "address", name: "tokenA", type: "address" },
-      { internalType: "address", name: "tokenB", type: "address" },
-      { internalType: "uint24", name: "fee", type: "uint24" }
-    ],
-    name: "getPool",
-    outputs: [{ internalType: "address", name: "pool", type: "address" }],
-    stateMutability: "view",
-    type: "function"
-  }
-];
-
-// Simple quote using tick-based calculation
-function calculateSimpleQuote(tick, amountIn, isToken0Input) {
-  // Convert tick to price using the formula: price = 1.0001^tick
-  // For simplicity, we'll use a basic approximation
-  const price = Math.pow(1.0001, tick);
+async function testQuote(agent, tokenInSymbol, tokenOutSymbol, amount) {
+  console.log(`\n${'═'.repeat(70)}`);
+  console.log(`📊 TEST: ${amount} ${tokenInSymbol} → ${tokenOutSymbol}`);
+  console.log(`${'═'.repeat(70)}`);
   
-  if (isToken0Input) {
-    // USDT is token0, USDC is token1
-    // price = token1/token0 = USDC/USDT
-    const amountOut = amountIn * price;
-    return Math.floor(amountOut);
-  } else {
-    // USDC is token1, USDT is token0
-    // price = token1/token0 = USDC/USDT
-    const amountOut = amountIn / price;
-    return Math.floor(amountOut);
-  }
-}
-
-async function testSimpleQuote() {
-  console.log('🔍 Testing Simple Quote Calculation');
+  const tokenIn = TOKENS[tokenInSymbol];
+  const tokenOut = TOKENS[tokenOutSymbol];
   
-  const publicClient = createPublicClient({
-    chain: kaia,
-    transport: http('https://public-en.node.kaia.io')
-  });
-
   try {
-    console.log('📡 Connecting to KAIA network...');
-    const blockNumber = await publicClient.getBlockNumber();
-    console.log(`✅ Connected. Current block: ${blockNumber}`);
-
-    // Get pool address for 0.05% fee tier
-    const poolAddress = await publicClient.readContract({
-      address: DRAGONSWAP_CONTRACTS.factory,
-      abi: FACTORY_ABI,
-      functionName: 'getPool',
-      args: [
-        getAddress(TOKENS.USDT),
-        getAddress(TOKENS.USDC),
-        500 // 0.05% fee
-      ]
-    });
-
-    console.log(`🏊 Pool address: ${poolAddress}`);
-
-    if (poolAddress === '0x0000000000000000000000000000000000000000') {
-      console.log('❌ Pool does not exist');
+    // First, check pool info
+    console.log('\n1️⃣ Checking pool information...');
+    const pools = await agent.getAllPools(tokenIn, tokenOut);
+    
+    if (pools.length === 0) {
+      console.log('❌ No pools found for this pair');
       return;
     }
-
-    // Get pool slot0 to get current tick
-    const SLOT0_ABI = [
-      {
-        inputs: [],
-        name: "slot0",
-        outputs: [
-          { internalType: "uint160", name: "sqrtPriceX96", type: "uint160" },
-          { internalType: "int24", name: "tick", type: "int24" },
-          { internalType: "uint16", name: "observationIndex", type: "uint16" },
-          { internalType: "uint16", name: "observationCardinality", type: "uint16" },
-          { internalType: "uint16", name: "observationCardinalityNext", type: "uint16" },
-          { internalType: "uint8", name: "feeProtocol", type: "uint8" },
-          { internalType: "bool", name: "unlocked", type: "bool" }
-        ],
-        stateMutability: "view",
-        type: "function"
-      }
-    ];
-
-    const slot0 = await publicClient.readContract({
-      address: poolAddress,
-      abi: SLOT0_ABI,
-      functionName: 'slot0'
-    });
-
-    const tick = Array.isArray(slot0) ? slot0[1] : slot0.tick;
-    console.log(`📉 Current tick: ${tick}`);
-
-    // Test quotes with different amounts
-    const testAmounts = ['1', '10', '100', '1000'];
     
-    console.log('\n💱 Testing USDT to USDC quotes:');
-    for (const amount of testAmounts) {
-      const amountIn = parseUnits(amount, 6); // 6 decimals for both tokens
-      const amountOut = calculateSimpleQuote(tick, Number(amount), true);
-      const formattedOut = formatUnits(amountOut.toString(), 6);
-      console.log(`${amount} USDT = ${formattedOut} USDC`);
+    console.log(`✅ Found ${pools.length} pool(s):`);
+    pools.forEach(pool => {
+      console.log(`   - Fee: ${pool.feeTierName}, Liquidity: ${pool.liquidity}, Address: ${pool.address}`);
+    });
+    
+    // Get quote
+    console.log('\n2️⃣ Getting swap quote...');
+    const quote = await agent.getSwapQuote({
+      tokenIn,
+      tokenOut,
+      amountIn: amount.toString(),
+      amountInDecimals: 18,
+      slippage: 50
+    });
+    
+    console.log('✅ Quote received:');
+    console.log(`   Input: ${quote.amountInFormatted} ${quote.tokenInSymbol}`);
+    console.log(`   Output: ${quote.amountOutFormatted} ${quote.tokenOutSymbol}`);
+    console.log(`   Estimated Price: ${quote.estimatedPrice}`);
+    console.log(`   Selected Fee Tier: ${quote.selectedFeeTier}`);
+    console.log(`   Price Impact: ${quote.priceImpact}%`);
+    console.log(`   Liquidity Score: ${quote.liquidityScore}`);
+    console.log(`   Trade Size Category: ${quote.tradeSizeCategory}`);
+    
+    // Verify the math
+    console.log('\n3️⃣ Verifying calculation...');
+    const effectivePrice = parseFloat(quote.amountOutFormatted) / parseFloat(quote.amountInFormatted);
+    console.log(`   Calculated effective price: ${effectivePrice}`);
+    console.log(`   Quote estimated price: ${quote.estimatedPrice}`);
+    const priceDiff = Math.abs(effectivePrice - quote.estimatedPrice) / quote.estimatedPrice * 100;
+    console.log(`   Price difference: ${priceDiff.toFixed(4)}%`);
+    
+    if (priceDiff > 1) {
+      console.log('   ⚠️  WARNING: Price difference is significant');
+    } else {
+      console.log('   ✅ Price calculation looks correct');
     }
-
-    console.log('\n🔄 Testing USDC to USDT quotes:');
-    for (const amount of testAmounts) {
-      const amountIn = parseUnits(amount, 6); // 6 decimals for both tokens
-      const amountOut = calculateSimpleQuote(tick, Number(amount), false);
-      const formattedOut = formatUnits(amountOut.toString(), 6);
-      console.log(`${amount} USDC = ${formattedOut} USDT`);
-    }
-
-    // Calculate approximate price
-    const price = Math.pow(1.0001, tick);
-    console.log(`\n💰 Approximate price: 1 USDT = ${price.toFixed(6)} USDC`);
-    console.log(`💰 Reverse price: 1 USDC = ${(1/price).toFixed(6)} USDT`);
-
-    console.log('\n🎉 Simple quote test completed!');
-
+    
+    return quote;
+    
   } catch (error) {
     console.error('❌ Test failed:', error.message);
-    console.error('Stack:', error.stack);
+    if (error.stack) {
+      console.error('Stack trace:', error.stack);
+    }
+    return null;
   }
 }
 
-testSimpleQuote().catch(console.error);
+async function runTests() {
+  console.log('🚀 DRAGONSWAP QUOTE TEST');
+  console.log('═'.repeat(70));
+  console.log('Testing DragonSwap V3 quote functionality\n');
+  
+  // Initialize agent in read-only mode
+  const agent = new WalletAgent({ mode: 'readonly' });
+  
+  const testCases = [
+    { tokenIn: 'WKAIA', tokenOut: 'USDT', amount: 1 },
+    { tokenIn: 'WKAIA', tokenOut: 'USDT', amount: 10 },
+    { tokenIn: 'WKAIA', tokenOut: 'USDT', amount: 100 },
+    { tokenIn: 'USDT', tokenOut: 'WKAIA', amount: 1 }
+  ];
+  
+  for (const testCase of testCases) {
+    await testQuote(agent, testCase.tokenIn, testCase.tokenOut, testCase.amount);
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1s between tests
+  }
+  
+  console.log('\n' + '═'.repeat(70));
+  console.log('🎉 ALL TESTS COMPLETED');
+  console.log('═'.repeat(70) + '\n');
+}
+
+// Run the tests
+runTests().catch(error => {
+  console.error('\n💥 Fatal error:', error);
+  process.exit(1);
+});

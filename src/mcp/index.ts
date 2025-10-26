@@ -12,6 +12,10 @@ import {
     ApproveTokenTool,
     EnterMarketTool
 } from "./kilolend";
+import { 
+    DragonSwapTools, 
+    DragonSwapReadOnlyTools 
+} from "./dragonswap";
 
 export const KaiaWalletTools = {
     // Basic wallet information and account management
@@ -29,6 +33,9 @@ export const KaiaWalletTools = {
     "SupplyToMarketTool": SupplyToMarketTool,                  // Supply tokens to lending markets
     "BorrowFromMarketTool": BorrowFromMarketTool,              // Borrow tokens from markets
     "RepayBorrowTool": RepayBorrowTool,                        // Repay borrowed tokens
+
+    // DragonSwap DEX operations
+    ...DragonSwapTools,                                        // All DragonSwap tools (quotes, swaps, pool info, routing)
 };
 
 export const KaiaReadOnlyTools = {
@@ -38,4 +45,7 @@ export const KaiaReadOnlyTools = {
     "GetMarketsTool": GetMarketsTool,
     "GetProtocolStatsTool": GetProtocolStatsTool,
     "CheckAllowanceTool": CheckAllowanceTool,                  // Check token allowance (read-only)
+
+    // DragonSwap read-only operations
+    ...DragonSwapReadOnlyTools,                                // DragonSwap quotes, pool info, routing (no private key)
 };

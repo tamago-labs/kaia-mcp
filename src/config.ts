@@ -252,6 +252,7 @@ export const SWAP_TOKENS = {
     // Native
     KAIA: "0x0000000000000000000000000000000000000000" as Address,
     WKAIA: "0x19aac5f612f524b754ca7e7c41cbfa2e981a4432" as Address, // Wrapped KAIA 
+    WKAI: "0x19aac5f612f524b754ca7e7c41cbfa2e981a4432" as Address, // Alias for WKAIA
     
     // Major Tokens
     USDT_OFFICIAL: "0xd077a400968890eacc75cdc901f0356c943e4fdb" as Address, // Official USDT  
