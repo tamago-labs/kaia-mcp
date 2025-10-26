@@ -76,13 +76,7 @@ async function main() {
 
         // Create wallet agent instance with private key if available
         const privateKey = environment.privateKey;
-        const walletAgent = new WalletAgent(privateKey);
-
-        // Initialize DragonSwap router with the same private key
-        // const dragonSwapRouter: IDragonSwapRouter = createDragonSwapRouter(privateKey);
-
-        // Initialize DragonSwap tools with the router instance
-        // initializeDragonSwapTools(dragonSwapRouter);
+        const walletAgent = new WalletAgent(privateKey); 
 
         // Create and start MCP server
         const server = createKaiaMcpServer(walletAgent);
@@ -93,8 +87,7 @@ async function main() {
         console.error(`📍 Mode: ${agentMode}`);
         console.error(`📍 Account: ${account.address}`);
 
-        const totalTools = Object.keys(agentMode === 'transaction' ? KaiaWalletTools : KaiaReadOnlyTools).length + 0
-        // Object.keys(agentMode === 'transaction' ? DragonSwapTools : DragonSwapReadOnlyTools).length;
+        const totalTools = Object.keys(agentMode === 'transaction' ? KaiaWalletTools : KaiaReadOnlyTools).length
         console.error(`📍 Available tools: ${totalTools}`);
 
         console.error("🔧 Available capabilities:");

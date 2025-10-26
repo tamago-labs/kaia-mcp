@@ -49,9 +49,9 @@ const CONTRACT_ADDRESSES = {
         cStKAIA: "0x0BC926EF3856542134B06DCf53c86005b08B9625",
         
         // Underlying Token Addresses
-        usdt_official: "0xd077a400968890eacc75cdc901f0356c943e4fdb", // Official USDT (fixed checksum)
-        usdt_wormhole: "0x5c13e303a62fc5dedf5b52d66873f2e59fedadc2", // Wormhole USDT (fixed checksum)
-        usdt: "0xd077a400968890eacc75cdc901f0356c943e4fdb", // Default to Official USDT (fixed checksum)
+        usdt_official: "0xd077a400968890eacc75cdc901f0356c943e4fdb", // Official USDT
+        usdt_wormhole: "0x5c13e303a62fc5dedf5b52d66873f2e59fedadc2", // Wormhole USDT
+        usdt: "0xd077a400968890eacc75cdc901f0356c943e4fdb", // Default to Official USDT
         six: "0xEf82b1C6A550e730D8283E1eDD4977cd01FAF435",
         bora: "0x02cbE46fB8A1F579254a9B485788f2D86Cad51aa",
         mbx: "0xD068c52d81f4409B9502dA926aCE3301cc41f623",
@@ -258,12 +258,16 @@ export const SWAP_TOKENS = {
     USDT_OFFICIAL: "0xd077a400968890eacc75cdc901f0356c943e4fdb" as Address, // Official USDT  
     USDT_WORMHOLE: "0x5c13e303a62fc5dedf5b52d66873f2e59fedadc2" as Address, // Wormhole USDT  
     USDT: "0xd077a400968890eacc75cdc901f0356c943e4fdb" as Address, // Default to Official USDT  
-     
+    
     BORA: "0x02cbE46fB8A1F579254a9B485788f2D86Cad51aa" as Address,
     SIX: "0xEf82b1C6A550e730D8283E1eDD4977cd01FAF435" as Address,
     MBX: "0xD068c52d81f4409B9502dA926aCE3301cc41f623" as Address,
     STAKED_KAIA: "0x42952B873ed6f7f0A7E4992E2a9818E3A9001995" as Address,
+    STKAIA: "0x42952B873ed6f7f0A7E4992E2a9818E3A9001995" as Address,
     RKLAY: "0xf898c138f9c8825cef83ca75535ed77100497296" as Address,
+    WETH :"0x98A8345bB9D3DDa9D808Ca1c9142a28F6b0430E1" as Address,
+    ETH :"0x98A8345bB9D3DDa9D808Ca1c9142a28F6b0430E1" as Address,
+    BTCB: "0x15D9f3AB1982B0e5a415451259994Ff40369f584" as Address
 } as const;
 
 // DragonSwap Token Addresses

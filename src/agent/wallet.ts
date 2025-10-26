@@ -3,21 +3,21 @@ import { privateKeyToAccount, type Account } from 'viem/accounts';
 import { kaia } from 'viem/chains';
 import { publicClient, networkInfo, apiConfig, DRAGONSWAP_CONTRACTS, SWAP_TOKENS, FEE_TIERS, DEFAULT_SLIPPAGE, DEFAULT_DEADLINE } from '../config';
 import { formatTokenAmount } from '../utils/formatting';
-import { 
-  COMPTROLLER_ADDRESS, 
-  COMPTROLLER_ABI 
+import {
+  COMPTROLLER_ADDRESS,
+  COMPTROLLER_ABI
 } from '../contracts/comptroller';
-import { 
-  CTOKEN_ABI, 
-  SYMBOL_TO_CTOKEN, 
-  TOKEN_ADDRESSES 
+import {
+  CTOKEN_ABI,
+  SYMBOL_TO_CTOKEN,
+  TOKEN_ADDRESSES
 } from '../contracts/ctoken';
 import { ERC20_ABI } from '../contracts/erc20';
-import { 
-  TransactionError, 
+import {
+  TransactionError,
   InsufficientBalanceError,
   ValidationError,
-  handleContractError 
+  handleContractError
 } from '../utils/errors';
 import { validateTransactionParams } from '../utils/validation';
 import axios from 'axios';
@@ -30,7 +30,7 @@ export class WalletAgent {
   constructor(config?: { privateKey?: string; mode?: 'readonly' | 'transaction' } | string) {
     // Handle different constructor signatures
     let privateKey: string | undefined;
-    
+
     if (typeof config === 'string') {
       // Backward compatibility: constructor(privateKey: string)
       privateKey = config;
@@ -42,17 +42,17 @@ export class WalletAgent {
         privateKey = config.privateKey;
       }
     }
-    
+
     if (privateKey) {
       // Initialize wallet for transaction capabilities
       // Ensure private key is properly formatted as hex string
       const formattedPrivateKey = privateKey.startsWith('0x') ? privateKey : `0x${privateKey}`;
-      
+
       // Validate private key format
       if (!/^0x[0-9a-fA-F]{64}$/.test(formattedPrivateKey)) {
         throw new Error(`Invalid private key format. Expected 64 hex characters (32 bytes), got: ${formattedPrivateKey.length - 2} characters`);
       }
-      
+
       this.account = privateKeyToAccount(formattedPrivateKey as `0x${string}`);
       this.walletClient = createWalletClient({
         account: this.account,
@@ -67,7 +67,7 @@ export class WalletAgent {
   }
 
   // ===== CONNECTION METHODS =====
-  
+
   async connect(): Promise<void> {
     // Connection is handled in constructor, but kept for compatibility
   }
@@ -197,7 +197,7 @@ export class WalletAgent {
         try {
           const marketData = await this.getMarketData(cTokenAddress as Address);
           const price = prices[symbol] || 0;
-          
+
           // Calculate real values
           const exchangeRate = parseFloat(marketData.exchangeRate) / 1e18;
           const supplyRatePerBlock = parseFloat(marketData.supplyRatePerBlock);
@@ -205,13 +205,13 @@ export class WalletAgent {
           const totalSupply = parseFloat(marketData.totalSupply) / 1e18;
           const totalBorrows = parseFloat(marketData.totalBorrows) / 1e18;
           const cash = parseFloat(marketData.cash) / 1e18;
-          
+
           // Convert block rates to APY (assuming 1 block per second on KAIA)
           const blocksPerYear = 31536000;
           const supplyApy = (Math.pow(1 + supplyRatePerBlock / 1e18, blocksPerYear) - 1) * 100;
           const borrowApy = (Math.pow(1 + borrowRatePerBlock / 1e18, blocksPerYear) - 1) * 100;
-          
-          const utilization = (totalSupply * exchangeRate) > 0 ? 
+
+          const utilization = (totalSupply * exchangeRate) > 0 ?
             (totalBorrows / (totalSupply * exchangeRate)) * 100 : 0;
 
           markets.push({
@@ -401,7 +401,7 @@ export class WalletAgent {
 
   async approveToken(tokenSymbol: string, spenderAddress: Address, amount?: string): Promise<string> {
     this.requireTransactionMode();
-    
+
     const tokenAddress = TOKEN_ADDRESSES[tokenSymbol as keyof typeof TOKEN_ADDRESSES];
     if (!tokenAddress) {
       throw new ValidationError(`Token ${tokenSymbol} not supported`);
@@ -412,9 +412,9 @@ export class WalletAgent {
     }
 
     try {
-      const amountWei = amount ? parseUnits(amount, 18) : 
+      const amountWei = amount ? parseUnits(amount, 18) :
         BigInt('115792089237316195423570985008687907853269984665640564039457584007913129639935'); // Max uint256
-      
+
       const txHash = await this.walletClient!.writeContract({
         address: tokenAddress,
         abi: ERC20_ABI,
@@ -452,7 +452,7 @@ export class WalletAgent {
 
   async enterMarkets(cTokenAddresses: Address[]): Promise<string> {
     this.requireTransactionMode();
-    
+
     try {
       const txHash = await this.walletClient!.writeContract({
         address: COMPTROLLER_ADDRESS,
@@ -473,19 +473,19 @@ export class WalletAgent {
 
   async sendNativeToken(to: Address, amount: string): Promise<string> {
     this.requireTransactionMode();
-    
+
     const validation = validateTransactionParams({ to, amount });
     if (!validation.isValid) {
       throw new ValidationError(validation.errors.join(', '));
     }
 
     try {
-      const balance = await publicClient.getBalance({ 
+      const balance = await publicClient.getBalance({
         address: this.getAddress()!
       });
-      
+
       const amountWei = parseUnits(amount, 18);
-      
+
       if (balance < amountWei) {
         throw new InsufficientBalanceError('KAIA', amount, balance.toString());
       }
@@ -505,7 +505,7 @@ export class WalletAgent {
 
   async sendERC20Token(tokenSymbol: string, to: Address, amount: string): Promise<string> {
     this.requireTransactionMode();
-    
+
     const validation = validateTransactionParams({ to, amount, symbol: tokenSymbol });
     if (!validation.isValid) {
       throw new ValidationError(validation.errors.join(', '));
@@ -534,7 +534,7 @@ export class WalletAgent {
 
   async supplyToMarket(tokenSymbol: string, amount: string): Promise<string> {
     this.requireTransactionMode();
-    
+
     const cTokenAddress = SYMBOL_TO_CTOKEN[tokenSymbol as keyof typeof SYMBOL_TO_CTOKEN];
     if (!cTokenAddress) {
       throw new ValidationError(`Market ${tokenSymbol} not available`);
@@ -551,14 +551,14 @@ export class WalletAgent {
       if (tokenSymbol !== 'KAIA') {
         const currentAllowance = await this.checkAllowance(tokenSymbol, cTokenAddress);
         const amountWei = parseUnits(amount, 18);
-        
+
         if (BigInt(currentAllowance) < amountWei) {
           await this.approveToken(tokenSymbol, cTokenAddress);
         }
       }
 
       const amountWei = parseUnits(amount, 18);
-      
+
       const txHash = await this.walletClient!.writeContract({
         address: cTokenAddress,
         abi: CTOKEN_ABI,
@@ -576,7 +576,7 @@ export class WalletAgent {
 
   async borrowFromMarket(tokenSymbol: string, amount: string): Promise<string> {
     this.requireTransactionMode();
-    
+
     const cTokenAddress = SYMBOL_TO_CTOKEN[tokenSymbol as keyof typeof SYMBOL_TO_CTOKEN];
     if (!cTokenAddress) {
       throw new ValidationError(`Market ${tokenSymbol} not available`);
@@ -584,7 +584,7 @@ export class WalletAgent {
 
     try {
       const amountWei = parseUnits(amount, 18);
-      
+
       const txHash = await this.walletClient!.writeContract({
         address: cTokenAddress,
         abi: CTOKEN_ABI,
@@ -602,7 +602,7 @@ export class WalletAgent {
 
   async repayBorrow(tokenSymbol: string, amount?: string): Promise<string> {
     this.requireTransactionMode();
-    
+
     const cTokenAddress = SYMBOL_TO_CTOKEN[tokenSymbol as keyof typeof SYMBOL_TO_CTOKEN];
     if (!cTokenAddress) {
       throw new ValidationError(`Market ${tokenSymbol} not available`);
@@ -612,17 +612,17 @@ export class WalletAgent {
       // For ERC20 tokens, check and handle allowance
       if (tokenSymbol !== 'KAIA') {
         const currentAllowance = await this.checkAllowance(tokenSymbol, cTokenAddress);
-        const amountWei = amount ? parseUnits(amount, 18) : 
+        const amountWei = amount ? parseUnits(amount, 18) :
           BigInt('115792089237316195423570985008687907853269984665640564039457584007913129639935');
-        
+
         if (BigInt(currentAllowance) < amountWei) {
           await this.approveToken(tokenSymbol, cTokenAddress);
         }
       }
 
-      const amountWei = amount ? parseUnits(amount, 18) : 
+      const amountWei = amount ? parseUnits(amount, 18) :
         BigInt('115792089237316195423570985008687907853269984665640564039457584007913129639935');
-      
+
       const txHash = await this.walletClient!.writeContract({
         address: cTokenAddress,
         abi: CTOKEN_ABI,
@@ -670,10 +670,10 @@ export class WalletAgent {
       for (const fee of prioritizedFeeTiers) {
         try {
           const quote = await this.calculateQuoteFromPool(tokenInAddress, tokenOutAddress, amountIn, amountInDecimals, fee);
-          
+
           // Calculate liquidity score for this quote
           const liquidityScore = this.calculateLiquidityScore(quote, amountInWei);
-          
+
           quotes.push({
             ...quote,
             liquidityScore,
@@ -741,7 +741,7 @@ export class WalletAgent {
     this.requireTransactionMode();
 
     const quote = await this.getSwapQuote(params);
-    
+
     const {
       tokenIn,
       tokenOut,
@@ -802,12 +802,12 @@ export class WalletAgent {
         abi: [
           {
             "inputs": [
-              {"internalType": "address", "name": "tokenA", "type": "address"},
-              {"internalType": "address", "name": "tokenB", "type": "address"},
-              {"internalType": "uint24", "name": "fee", "type": "uint24"}
+              { "internalType": "address", "name": "tokenA", "type": "address" },
+              { "internalType": "address", "name": "tokenB", "type": "address" },
+              { "internalType": "uint24", "name": "fee", "type": "uint24" }
             ],
             "name": "getPool",
-            "outputs": [{"internalType": "address", "name": "pool", "type": "address"}],
+            "outputs": [{ "internalType": "address", "name": "pool", "type": "address" }],
             "stateMutability": "view",
             "type": "function"
           }
@@ -831,28 +831,28 @@ export class WalletAgent {
           {
             "inputs": [],
             "name": "token0",
-            "outputs": [{"internalType": "address", "name": "", "type": "address"}],
+            "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
             "stateMutability": "view",
             "type": "function"
           },
           {
             "inputs": [],
             "name": "token1",
-            "outputs": [{"internalType": "address", "name": "", "type": "address"}],
+            "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
             "stateMutability": "view",
             "type": "function"
           },
           {
             "inputs": [],
             "name": "fee",
-            "outputs": [{"internalType": "uint24", "name": "", "type": "uint24"}],
+            "outputs": [{ "internalType": "uint24", "name": "", "type": "uint24" }],
             "stateMutability": "view",
             "type": "function"
           },
           {
             "inputs": [],
             "name": "liquidity",
-            "outputs": [{"internalType": "uint128", "name": "", "type": "uint128"}],
+            "outputs": [{ "internalType": "uint128", "name": "", "type": "uint128" }],
             "stateMutability": "view",
             "type": "function"
           },
@@ -860,13 +860,13 @@ export class WalletAgent {
             "inputs": [],
             "name": "slot0",
             "outputs": [
-              {"internalType": "uint160", "name": "sqrtPriceX96", "type": "uint160"},
-              {"internalType": "int24", "name": "tick", "type": "int24"},
-              {"internalType": "uint16", "name": "observationIndex", "type": "uint16"},
-              {"internalType": "uint16", "name": "observationCardinality", "type": "uint16"},
-              {"internalType": "uint16", "name": "observationCardinalityNext", "type": "uint16"},
-              {"internalType": "uint8", "name": "feeProtocol", "type": "uint8"},
-              {"internalType": "bool", "name": "unlocked", "type": "bool"}
+              { "internalType": "uint160", "name": "sqrtPriceX96", "type": "uint160" },
+              { "internalType": "int24", "name": "tick", "type": "int24" },
+              { "internalType": "uint16", "name": "observationIndex", "type": "uint16" },
+              { "internalType": "uint16", "name": "observationCardinality", "type": "uint16" },
+              { "internalType": "uint16", "name": "observationCardinalityNext", "type": "uint16" },
+              { "internalType": "uint8", "name": "feeProtocol", "type": "uint8" },
+              { "internalType": "bool", "name": "unlocked", "type": "bool" }
             ],
             "stateMutability": "view",
             "type": "function"
@@ -941,7 +941,7 @@ export class WalletAgent {
     // For now, implement single-hop routing
     // Multi-hop routing can be added later
     const quote = await this.getSwapQuote(params);
-    
+
     return {
       type: 'single-hop',
       route: quote.route,
@@ -978,7 +978,7 @@ export class WalletAgent {
     // Calculate quote using tick-based formula
     const amountInWei = parseUnits(amountIn, tokenInDecimals);
     const isToken0Input = tokenIn.toLowerCase() === poolInfo.token0.toLowerCase();
-    
+
     const amountOutWei = this.calculateAmountOutFromSqrtPrice(
       BigInt(poolInfo.sqrtPriceX96),
       amountInWei,
@@ -1015,28 +1015,28 @@ export class WalletAgent {
   ): bigint {
     // FIXED: Using proper Uniswap V3 price calculation with correct decimal handling
     // sqrtPriceX96 = sqrt(price) * 2^96 where price = token1/token0 in raw units (wei/wei)
-    
+
     const Q96 = BigInt(2) ** BigInt(96);
-    
+
     // Calculate price = (sqrtPriceX96 / 2^96)^2
     // This gives us price in raw units where price = token1/token0
     const sqrtPrice = Number(sqrtPriceX96) / Number(Q96);
     const priceRaw = sqrtPrice * sqrtPrice;
-    
+
     // CRITICAL FIX: Get token0 and token1 decimals (NOT input/output decimals)
     // The pool always stores price as token1/token0, so we must use the correct decimals
     const token0Decimals = isToken0Input ? tokenInDecimals : tokenOutDecimals;
     const token1Decimals = isToken0Input ? tokenOutDecimals : tokenInDecimals;
-    
+
     // Convert price from raw units (wei/wei) to human-readable
     // price_human = price_raw * 10^(token0Decimals - token1Decimals)
     const priceHuman = priceRaw * Math.pow(10, token0Decimals - token1Decimals);
-    
+
     // Convert amountIn to human-readable
     const amountInHuman = Number(amountIn) / Math.pow(10, tokenInDecimals);
-    
+
     let amountOutHuman: number;
-    
+
     if (isToken0Input) {
       // Swapping token0 for token1
       // amount1_out = amount0_in * (token1/token0)
@@ -1046,16 +1046,37 @@ export class WalletAgent {
       // amount0_out = amount1_in / (token1/token0) = amount1_in * (token0/token1)
       amountOutHuman = amountInHuman / priceHuman;
     }
-    
+
     // Convert back to wei with tokenOut decimals
     const amountOutWei = BigInt(Math.floor(amountOutHuman * Math.pow(10, tokenOutDecimals)));
-    
+
     return amountOutWei;
   }
 
   private async getSwapTokenDecimals(token: Address): Promise<number> {
-    if (token === SWAP_TOKENS.KAIA) {
+    if (
+      token === SWAP_TOKENS.KAIA ||
+      token === SWAP_TOKENS.WKAIA ||
+      token === SWAP_TOKENS.WKAI ||
+      token === SWAP_TOKENS.BORA ||
+      token === SWAP_TOKENS.SIX ||
+      token === SWAP_TOKENS.MBX ||
+      token === SWAP_TOKENS.STAKED_KAIA ||
+      token === SWAP_TOKENS.STKAIA ||
+      token === SWAP_TOKENS.RKLAY ||
+      token === SWAP_TOKENS.WETH ||
+      token === SWAP_TOKENS.ETH ||
+      token === SWAP_TOKENS.BTCB
+    ) {
       return 18;
+    }
+
+    if (
+      token === SWAP_TOKENS.USDT ||
+      token === SWAP_TOKENS.USDT_OFFICIAL ||
+      token === SWAP_TOKENS.USDT_WORMHOLE
+    ) {
+      return 6;
     }
 
     try {
@@ -1125,12 +1146,12 @@ export class WalletAgent {
     if (SWAP_TOKENS[upperToken as keyof typeof SWAP_TOKENS]) {
       return SWAP_TOKENS[upperToken as keyof typeof SWAP_TOKENS] as Address;
     }
-    
+
     // Check if it's already an address
     if (token.startsWith('0x') && token.length === 42) {
       return token as Address;
     }
-    
+
     throw new Error(`Invalid token address or symbol: ${token}`);
   }
 
@@ -1139,12 +1160,12 @@ export class WalletAgent {
     if (SWAP_TOKENS[upperToken as keyof typeof SWAP_TOKENS]) {
       return upperToken;
     }
-    
+
     // If it's an address, return shortened version
     if (token.startsWith('0x') && token.length === 42) {
       return `${token.slice(0, 6)}...${token.slice(-4)}`;
     }
-    
+
     return token;
   }
 
@@ -1187,11 +1208,11 @@ export class WalletAgent {
       const response = await axios.get(apiConfig.priceUrl, { timeout: apiConfig.timeout });
 
       const prices: Record<string, number> = {};
-      
+
       // Parse KiloLend API response format
       if (response.data?.success && response.data?.data) {
         const priceData = response.data.data;
-        
+
         // Map API symbols to our internal symbols
         for (const item of priceData) {
           switch (item.symbol) {
@@ -1272,25 +1293,25 @@ export class WalletAgent {
   private calculateLiquidityScore(quote: any, amountInWei: bigint): number {
     // Calculate liquidity score based on pool liquidity vs trade size
     const poolLiquidity = BigInt(quote.route?.pools[0]?.liquidity || '0');
-    
+
     if (poolLiquidity === 0n) {
       return 0;
     }
 
     // Calculate trade size as percentage of pool liquidity
     const tradeSizeRatio = Number(amountInWei) / Number(poolLiquidity);
-    
+
     // Higher score for pools with more liquidity relative to trade size
     // Score = 1 / (1 + tradeSizeRatio * 10) - gives higher scores to pools with better liquidity
     const liquidityScore = 1 / (1 + tradeSizeRatio * 10);
-    
+
     return liquidityScore;
   }
 
   private calculatePriceImpact(quote: any, amountInWei: bigint): number {
     // Calculate price impact based on the trade size relative to pool liquidity
     const poolLiquidity = BigInt(quote.route?.pools[0]?.liquidity || '0');
-    
+
     if (poolLiquidity === 0n) {
       return 100; // 100% price impact for empty pool
     }
@@ -1298,9 +1319,9 @@ export class WalletAgent {
     // Simple price impact estimation: tradeSize / (tradeSize + liquidity)
     const tradeSize = Number(amountInWei);
     const liquidity = Number(poolLiquidity);
-    
+
     const priceImpact = (tradeSize / (tradeSize + liquidity)) * 100;
-    
+
     return Math.min(priceImpact, 100); // Cap at 100%
   }
 
@@ -1346,7 +1367,7 @@ export class WalletAgent {
     });
 
     // Select quote with highest combined score
-    const bestQuote = scoredQuotes.reduce((best, current) => 
+    const bestQuote = scoredQuotes.reduce((best, current) =>
       current.combinedScore > best.combinedScore ? current : best
     );
 
@@ -1357,28 +1378,28 @@ export class WalletAgent {
 
   private getOptimalFeeTiers(amountInWei: bigint, amountInDecimals: number): number[] {
     const tradeSizeCategory = this.categorizeTradeSize(amountInWei, amountInDecimals);
-    
+
     switch (tradeSizeCategory) {
       case 'micro':
         // For micro trades, prioritize lowest fees for better rates
         return [FEE_TIERS.LOWEST, FEE_TIERS.LOW, FEE_TIERS.MEDIUM, FEE_TIERS.HIGH, FEE_TIERS.HIGHEST];
-      
+
       case 'small':
         // For small trades, balance between fees and liquidity
         return [FEE_TIERS.LOW, FEE_TIERS.MEDIUM, FEE_TIERS.LOWEST, FEE_TIERS.HIGH, FEE_TIERS.HIGHEST];
-      
+
       case 'medium':
         // For medium trades, prioritize liquidity over lowest fees
         return [FEE_TIERS.MEDIUM, FEE_TIERS.HIGH, FEE_TIERS.LOW, FEE_TIERS.LOWEST, FEE_TIERS.HIGHEST];
-      
+
       case 'large':
         // For large trades, prioritize high liquidity pools
         return [FEE_TIERS.HIGH, FEE_TIERS.MEDIUM, FEE_TIERS.HIGHEST, FEE_TIERS.LOW, FEE_TIERS.LOWEST];
-      
+
       case 'whale':
         // For whale trades, prioritize highest liquidity pools
         return [FEE_TIERS.HIGHEST, FEE_TIERS.HIGH, FEE_TIERS.MEDIUM, FEE_TIERS.LOW, FEE_TIERS.LOWEST];
-      
+
       default:
         // Default to standard ordering
         return [FEE_TIERS.LOWEST, FEE_TIERS.LOW, FEE_TIERS.MEDIUM, FEE_TIERS.HIGH, FEE_TIERS.HIGHEST];
@@ -1388,7 +1409,7 @@ export class WalletAgent {
   private categorizeTradeSize(amountInWei: bigint, amountInDecimals: number): string {
     // Convert to human-readable amount for categorization
     const amountInHuman = Number(amountInWei) / Math.pow(10, amountInDecimals);
-    
+
     // Define trade size categories (in USD equivalent terms)
     // These thresholds can be adjusted based on typical trading patterns
     if (amountInHuman < 10) {
