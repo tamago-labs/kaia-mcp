@@ -1,6 +1,6 @@
 {
     "name": "@tamago-labs/kaia-mcp",
-    "version": "0.1.7",
+    "version": "0.1.8",
     "description": "MCP libraries for AI agents on the KAIA blockchain, enabling multi-protocol DeFi operations including lending, DEX, and staking",
     "main": "dist/index.js",
     "module": "./dist/index.mjs",

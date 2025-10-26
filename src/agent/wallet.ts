@@ -416,7 +416,21 @@ export class WalletAgent {
   // ===== ALLOWANCE AND MARKET ENTRY METHODS =====
 
   async checkAllowance(tokenSymbol: string, spenderAddress: Address): Promise<string> {
-    const tokenAddress = TOKEN_ADDRESSES[tokenSymbol as keyof typeof TOKEN_ADDRESSES];
+    // Create unified token list combining KiloLend and DragonSwap tokens
+    const unifiedTokenAddresses = {
+      ...TOKEN_ADDRESSES, // KiloLend tokens
+      'WKAIA': SWAP_TOKENS.WKAIA, // Add WKAIA from swap tokens
+      'RKLAY': SWAP_TOKENS.RKLAY, // Add RKLAY
+      'WETH': SWAP_TOKENS.WETH, // Add WETH
+      'BTCB': SWAP_TOKENS.BTCB, // Add BTCB
+      'USDT': SWAP_TOKENS.USDT, // Override with DragonSwap USDT
+      'SIX': SWAP_TOKENS.SIX, // Override with DragonSwap SIX
+      'BORA': SWAP_TOKENS.BORA, // Override with DragonSwap BORA
+      'MBX': SWAP_TOKENS.MBX, // Override with DragonSwap MBX
+      'STAKED_KAIA': SWAP_TOKENS.STAKED_KAIA, // Override with DragonSwap STAKED_KAIA
+    };
+
+    const tokenAddress = unifiedTokenAddresses[tokenSymbol as keyof typeof unifiedTokenAddresses];
     if (!tokenAddress) {
       throw new ValidationError(`Token ${tokenSymbol} not supported`);
     }
@@ -442,7 +456,21 @@ export class WalletAgent {
   async approveToken(tokenSymbol: string, spenderAddress: Address, amount?: string): Promise<string> {
     this.requireTransactionMode();
 
-    const tokenAddress = TOKEN_ADDRESSES[tokenSymbol as keyof typeof TOKEN_ADDRESSES];
+    // Create unified token list combining KiloLend and DragonSwap tokens
+    const unifiedTokenAddresses = {
+      ...TOKEN_ADDRESSES, // KiloLend tokens
+      'WKAIA': SWAP_TOKENS.WKAIA, // Add WKAIA from swap tokens
+      'RKLAY': SWAP_TOKENS.RKLAY, // Add RKLAY
+      'WETH': SWAP_TOKENS.WETH, // Add WETH
+      'BTCB': SWAP_TOKENS.BTCB, // Add BTCB
+      'USDT': SWAP_TOKENS.USDT, // Override with DragonSwap USDT
+      'SIX': SWAP_TOKENS.SIX, // Override with DragonSwap SIX
+      'BORA': SWAP_TOKENS.BORA, // Override with DragonSwap BORA
+      'MBX': SWAP_TOKENS.MBX, // Override with DragonSwap MBX
+      'STAKED_KAIA': SWAP_TOKENS.STAKED_KAIA, // Override with DragonSwap STAKED_KAIA
+    };
+
+    const tokenAddress = unifiedTokenAddresses[tokenSymbol as keyof typeof unifiedTokenAddresses];
     if (!tokenAddress) {
       throw new ValidationError(`Token ${tokenSymbol} not supported`);
     }
@@ -452,7 +480,13 @@ export class WalletAgent {
     }
 
     try {
-      const amountWei = amount ? parseUnits(amount, 18) :
+      // Get proper decimals for the token
+      let decimals = 18; // Default
+      if (tokenSymbol === 'USDT') {
+        decimals = 6; // USDT has 6 decimals
+      }
+
+      const amountWei = amount ? parseUnits(amount, decimals) :
         BigInt('115792089237316195423570985008687907853269984665640564039457584007913129639935'); // Max uint256
 
       const txHash = await this.walletClient!.writeContract({
@@ -551,17 +585,37 @@ export class WalletAgent {
       throw new ValidationError(validation.errors.join(', '));
     }
 
-    const tokenAddress = TOKEN_ADDRESSES[tokenSymbol as keyof typeof TOKEN_ADDRESSES];
+    // Create unified token list combining KiloLend and DragonSwap tokens
+    const unifiedTokenAddresses = {
+      ...TOKEN_ADDRESSES, // KiloLend tokens
+      'WKAIA': SWAP_TOKENS.WKAIA, // Add WKAIA from swap tokens
+      'RKLAY': SWAP_TOKENS.RKLAY, // Add RKLAY
+      'WETH': SWAP_TOKENS.WETH, // Add WETH
+      'BTCB': SWAP_TOKENS.BTCB, // Add BTCB
+      'USDT': SWAP_TOKENS.USDT, // Override with DragonSwap USDT
+      'SIX': SWAP_TOKENS.SIX, // Override with DragonSwap SIX
+      'BORA': SWAP_TOKENS.BORA, // Override with DragonSwap BORA
+      'MBX': SWAP_TOKENS.MBX, // Override with DragonSwap MBX
+      'STAKED_KAIA': SWAP_TOKENS.STAKED_KAIA, // Override with DragonSwap STAKED_KAIA
+    };
+
+    const tokenAddress = unifiedTokenAddresses[tokenSymbol as keyof typeof unifiedTokenAddresses];
     if (!tokenAddress) {
       throw new ValidationError(`Token ${tokenSymbol} not supported`);
     }
 
     try {
+      // Get proper decimals for the token
+      let decimals = 18; // Default
+      if (tokenSymbol === 'USDT') {
+        decimals = 6; // USDT has 6 decimals
+      }
+
       const txHash = await this.walletClient!.writeContract({
         address: tokenAddress,
         abi: ERC20_ABI,
         functionName: 'transfer',
-        args: [to, parseUnits(amount, 18)],
+        args: [to, parseUnits(amount, decimals)],
         account: this.account!,
         chain: kaia
       });
@@ -590,14 +644,22 @@ export class WalletAgent {
       // For ERC20 tokens, check and handle allowance
       if (tokenSymbol !== 'KAIA') {
         const currentAllowance = await this.checkAllowance(tokenSymbol, cTokenAddress);
-        const amountWei = parseUnits(amount, 18);
+        let decimals = 18; // Default
+        if (tokenSymbol === 'USDT') {
+          decimals = 6; // USDT has 6 decimals
+        }
+        const amountWei = parseUnits(amount, decimals);
 
         if (BigInt(currentAllowance) < amountWei) {
           await this.approveToken(tokenSymbol, cTokenAddress);
         }
       }
 
-      const amountWei = parseUnits(amount, 18);
+      let decimals = 18; // Default
+      if (tokenSymbol === 'USDT') {
+        decimals = 6; // USDT has 6 decimals
+      }
+      const amountWei = parseUnits(amount, decimals);
 
       const txHash = await this.walletClient!.writeContract({
         address: cTokenAddress,
@@ -668,6 +730,76 @@ export class WalletAgent {
         abi: CTOKEN_ABI,
         functionName: 'repayBorrow',
         args: [amountWei],
+        account: this.account!,
+        chain: kaia
+      });
+
+      return txHash;
+    } catch (error) {
+      throw handleContractError(error);
+    }
+  }
+
+  async redeemTokens(tokenSymbol: string, cTokenAmount: string): Promise<string> {
+    this.requireTransactionMode();
+
+    const cTokenAddress = SYMBOL_TO_CTOKEN[tokenSymbol as keyof typeof SYMBOL_TO_CTOKEN];
+    if (!cTokenAddress) {
+      throw new ValidationError(`Market ${tokenSymbol} not available`);
+    }
+
+    try {
+      // Check if user has sufficient cToken balance
+      const cTokenBalance = await publicClient.readContract({
+        address: cTokenAddress,
+        abi: CTOKEN_ABI,
+        functionName: 'balanceOf',
+        args: [this.getAddress()!]
+      }) as bigint;
+
+      const cTokenAmountWei = parseUnits(cTokenAmount, 8); // cTokens use 8 decimals
+
+      if (cTokenBalance < cTokenAmountWei) {
+        throw new InsufficientBalanceError(`c${tokenSymbol}`, cTokenAmount, cTokenBalance.toString());
+      }
+
+      const txHash = await this.walletClient!.writeContract({
+        address: cTokenAddress,
+        abi: CTOKEN_ABI,
+        functionName: 'redeem',
+        args: [cTokenAmountWei],
+        account: this.account!,
+        chain: kaia
+      });
+
+      return txHash;
+    } catch (error) {
+      throw handleContractError(error);
+    }
+  }
+
+  async redeemUnderlying(tokenSymbol: string, underlyingAmount: string): Promise<string> {
+    this.requireTransactionMode();
+
+    const cTokenAddress = SYMBOL_TO_CTOKEN[tokenSymbol as keyof typeof SYMBOL_TO_CTOKEN];
+    if (!cTokenAddress) {
+      throw new ValidationError(`Market ${tokenSymbol} not available`);
+    }
+
+    try {
+      // Get proper decimals for the token
+      let decimals = 18; // Default
+      if (tokenSymbol === 'USDT') {
+        decimals = 6; // USDT has 6 decimals
+      }
+
+      const underlyingAmountWei = parseUnits(underlyingAmount, decimals);
+
+      const txHash = await this.walletClient!.writeContract({
+        address: cTokenAddress,
+        abi: CTOKEN_ABI,
+        functionName: 'redeemUnderlying',
+        args: [underlyingAmountWei],
         account: this.account!,
         chain: kaia
       });

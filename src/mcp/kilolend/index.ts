@@ -7,3 +7,5 @@ export { SupplyToMarketTool } from './supply_to_market_tool';
 export { CheckAllowanceTool } from './check_allowance_tool';
 export { ApproveTokenTool } from './approve_token_tool';
 export { EnterMarketTool } from './enter_market_tool';
+export { RedeemTokensTool } from './redeem_tokens_tool';
+export { RedeemUnderlyingTool } from './redeem_underlying_tool';

@@ -12,7 +12,9 @@ import {
     RepayBorrowTool,
     CheckAllowanceTool,
     ApproveTokenTool,
-    EnterMarketTool
+    EnterMarketTool,
+    RedeemTokensTool,
+    RedeemUnderlyingTool
 } from "./kilolend";
 import { 
     DragonSwapTools, 
@@ -37,6 +39,8 @@ export const KaiaWalletTools = {
     "SupplyToMarketTool": SupplyToMarketTool,                  // Supply tokens to lending markets
     "BorrowFromMarketTool": BorrowFromMarketTool,              // Borrow tokens from markets
     "RepayBorrowTool": RepayBorrowTool,                        // Repay borrowed tokens
+    "RedeemTokensTool": RedeemTokensTool,                      // Redeem cTokens (withdraw by cToken amount)
+    "RedeemUnderlyingTool": RedeemUnderlyingTool,              // Redeem underlying tokens (withdraw by underlying amount)
 
     // DragonSwap DEX operations
     ...DragonSwapTools,                                        // All DragonSwap tools (quotes, swaps, pool info, routing)
@@ -48,7 +52,6 @@ export const KaiaReadOnlyTools = {
     "GetAccountLiquidityTool": GetAccountLiquidityTool,
     "GetMarketsTool": GetMarketsTool,
     "GetProtocolStatsTool": GetProtocolStatsTool,
-    
 
     // DragonSwap read-only operations
     ...DragonSwapReadOnlyTools,                                // DragonSwap quotes, pool info, routing (no private key)

@@ -29,9 +29,13 @@ A comprehensive Model Context Protocol (MCP) server for interacting with multipl
 ### 💰 Transaction Operations (Transaction Mode)
 - Send native KAIA tokens
 - Send ERC-20 tokens
+- Wrap/unwrap KAIA to WKAIA
+- Check and manage token allowances
+- Enter markets as collateral
 - Supply assets to lending markets
 - Borrow from lending markets
 - Repay borrowed positions
+- **Complete withdraw operations** (redeem cTokens or underlying tokens)
 - DEX swaps and liquidity operations
 
 ## Real Blockchain Data Integration
@@ -182,9 +186,16 @@ KAIA_NETWORK="kaia"                                  # Network (only kaia suppor
 |------|-------------|
 | `send_native_token` | Send native KAIA tokens |
 | `send_erc20_token` | Send ERC-20 tokens |
+| `wrap_kaia` | Wrap KAIA to WKAIA |
+| `unwrap_kaia` | Unwrap WKAIA to KAIA |
+| `check_allowance` | Check token allowance for operations |
+| `approve_token` | Approve tokens for KiloLend operations |
+| `enter_market` | Enter markets to enable collateral usage |
 | `supply_to_market` | Supply assets to lending market |
 | `borrow_from_market` | Borrow from lending market |
 | `repay_borrow` | Repay borrowed positions |
+| `redeem_tokens` | Redeem cTokens (withdraw by cToken amount) |
+| `redeem_underlying` | Redeem underlying tokens (withdraw by underlying amount) |
 
 ### DragonSwap Tools
 
@@ -193,6 +204,7 @@ KAIA_NETWORK="kaia"                                  # Network (only kaia suppor
 |------|-------------|
 | `dragonswap_get_pool_info` | Get DragonSwap pool information |
 | `dragonswap_get_swap_quote` | Get swap quotes without executing |
+| `dragonswap_get_route` | Get best routing path for swaps (supports multi-hop) |
 
 #### Transaction Tools
 | Tool | Description |
@@ -254,10 +266,107 @@ KAIA_RPC_URL=https://public-en.node.kaia.io KAIA_PRIVATE_KEY=your_key KAIA_AGENT
 #### Supply to KiloLend Market (Transaction Mode)
 ```json
 {
-  "tool": "supply_to_market",
+  "tool": "kaia_supply_to_lending",
   "arguments": {
-    "ctoken_address": "0x...",
+    "token_symbol": "USDT",
     "amount": "1000"
+  }
+}
+```
+
+#### Borrow from KiloLend Market (Transaction Mode)
+```json
+{
+  "tool": "kaia_borrow_from_lending",
+  "arguments": {
+    "token_symbol": "KAIA",
+    "amount": "100"
+  }
+}
+```
+
+#### Repay Borrowed Position (Transaction Mode)
+```json
+{
+  "tool": "kaia_repay_borrow",
+  "arguments": {
+    "token_symbol": "KAIA",
+    "amount": "50"
+  }
+}
+```
+
+#### Redeem cTokens (Withdraw by cToken Amount)
+```json
+{
+  "tool": "kaia_redeem_tokens",
+  "arguments": {
+    "token_symbol": "USDT",
+    "ctoken_amount": "100000000"
+  }
+}
+```
+
+#### Redeem Underlying Tokens (Withdraw by Underlying Amount)
+```json
+{
+  "tool": "kaia_redeem_underlying",
+  "arguments": {
+    "token_symbol": "USDT",
+    "underlying_amount": "500"
+  }
+}
+```
+
+#### Wrap KAIA to WKAIA (Transaction Mode)
+```json
+{
+  "tool": "kaia_wrap_kaia",
+  "arguments": {
+    "amount": "100"
+  }
+}
+```
+
+#### Unwrap WKAIA to KAIA (Transaction Mode)
+```json
+{
+  "tool": "kaia_unwrap_kaia",
+  "arguments": {
+    "amount": "100"
+  }
+}
+```
+
+#### Check Token Allowance
+```json
+{
+  "tool": "kaia_check_allowance",
+  "arguments": {
+    "token_symbol": "USDT",
+    "spender_address": "0x498823F094f6F2121CcB4e09371a57A96d619695"
+  }
+}
+```
+
+#### Approve Token for KiloLend Operations
+```json
+{
+  "tool": "kaia_approve_token",
+  "arguments": {
+    "token_symbol": "USDT",
+    "spender_address": "0x498823F094f6F2121CcB4e09371a57A96d619695",
+    "amount": "1000"
+  }
+}
+```
+
+#### Enter Market as Collateral
+```json
+{
+  "tool": "kaia_enter_market",
+  "arguments": {
+    "ctoken_addresses": ["0x498823F094f6F2121CcB4e09371a57A96d619695"]
   }
 }
 ```
@@ -418,7 +527,7 @@ If you encounter issues with environment variables not being recognized:
 
 1. **Check required variables**: Make sure `KAIA_RPC_URL` is always set
 2. **Verify mode settings**: `KAIA_AGENT_MODE` should be either "readonly" or "transaction"
-3. **Private key format**: `KAIA_PRIVATE_KEY` should be a valid private key (with or without 0x prefix)
+3. **Private key format**: `KAIA_PRIVATE_KEY` must be 64 hex characters (with or without 0x prefix)
 4. **Debug logging**: The server will log all configuration on startup to stderr
 
 Example environment validation output:
