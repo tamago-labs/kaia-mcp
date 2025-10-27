@@ -72,7 +72,7 @@ export const GetSwapQuoteTool: McpTool = {
           currentBalanceIn: quote.currentBalanceIn,
           currentBalanceOut: quote.currentBalanceOut,
           route: quote.route,
-          priceImpact: quote.priceImpact || "N/A"
+          // priceImpact: quote.priceImpact || "N/A"
         },
         insights: {
           canSwap: parseFloat(quote.currentBalanceIn) >= parseFloat(quote.amountInFormatted),
