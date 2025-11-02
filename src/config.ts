@@ -37,16 +37,16 @@ export type KAIAMCPEnvironmentInput = z.infer<typeof KAIAMCPEnvironmentSchema>;
 const CONTRACT_ADDRESSES = {
     kaia: {
         // KiloLend Protocol Contracts
-        comptroller: "0x0B5f0Ba5F13eA4Cb9C8Ee48FB75aa22B451470C2",
-        oracle: "0xBB265F42Cce932c5e383536bDf50B82e08eaf454",
+        comptroller: "0x2591d179a0B1dB1c804210E111035a3a13c95a48",
+        oracle: "0xE370336C3074E76163b2f9B07876d0Cb3425488D",
         
         // KiloLend cTokens (Lending Markets)
-        cUSDT: "0x498823F094f6F2121CcB4e09371a57A96d619695",
-        cSIX: "0xC468dFD0C96691035B3b1A4CA152Cb64F0dbF64c",
-        cBORA: "0x7a937C07d49595282c711FBC613c881a83B9fDFD",
-        cMBX: "0xE321e20F0244500A194543B1EBD8604c02b8fA85",
-        cKAIA: "0x98Ab86C97Ebf33D28fc43464353014e8c9927aB3",
-        cStKAIA: "0x0BC926EF3856542134B06DCf53c86005b08B9625",
+        cUSDT: "0x20A2Cbc68fbee094754b2F03d15B1F5466f1F649",
+        cSIX: "0x287770f1236AdbE3F4dA4f29D0f1a776f303C966",
+        cBORA: "0xA7247a6f5EaC85354642e0E90B515E2dC027d5F4",
+        cMBX: "0xa024B1DE3a6022FB552C2ED9a8050926Fb22d7b6",
+        cKAIA: "0x2029f3E3C667EBd68b1D29dbd61dc383BdbB56e5",
+        cStKAIA: "0x8A424cCf2D2B7D85F1DFb756307411D2BBc73e07",
         
         // Underlying Token Addresses
         usdt_official: "0xd077a400968890eacc75cdc901f0356c943e4fdb", // Official USDT
