@@ -20,6 +20,7 @@ import {
     DragonSwapTools, 
     DragonSwapReadOnlyTools 
 } from "./dragonswap";
+import { PriceApiTools } from "./price-api";
 
 export const KaiaWalletTools = {
     // Basic wallet information and account management
@@ -44,6 +45,9 @@ export const KaiaWalletTools = {
 
     // DragonSwap DEX operations
     ...DragonSwapTools,                                        // All DragonSwap tools (quotes, swaps, pool info, routing)
+
+    // Price API operations
+    ...PriceApiTools,                                          // All price API tools (get prices for tokens)
 };
 
 export const KaiaReadOnlyTools = {
@@ -55,4 +59,7 @@ export const KaiaReadOnlyTools = {
 
     // DragonSwap read-only operations
     ...DragonSwapReadOnlyTools,                                // DragonSwap quotes, pool info, routing (no private key)
+
+    // Price API operations (read-only)
+    ...PriceApiTools,                                          // All price API tools (get prices for tokens)
 };

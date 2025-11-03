@@ -15,6 +15,7 @@ Built on the **Model Context Protocol (MCP)**, it connects tools like **Claude D
 ### Multi-Protocol Support
 - **Lending:** KiloLend (Compound v2 fork) for supply, borrow, and repay  
 - **DEX:** DragonSwap V3 for quotes and swaps  
+- **Price API:** Real-time token prices from KiloLend price feed  
 - **AI-Managed Vaults:** Automated cross-protocol strategies to boost yield *(planned)*  
 - **Market Intelligence:** Real-time APYs, utilization, and TVL  
 - **Smart Wallet:** Unified position and balance tracking  
@@ -73,7 +74,10 @@ src/
 │   ├── index.ts             # Main MCP server entry point and tool registry
 │   ├── kilolend/           # KiloLend protocol tools
 │   ├── dragonswap/          # DragonSwap V3 protocol tools
+│   ├── price-api/          # Price API tools for token prices
 │   └── wallet/              # General wallet operations
+├── tools/                  # Core utility functions
+│   └── price-api/          # Price API core functions
 ├── contracts/               # Smart contract interfaces and ABIs
 │   ├── comptroller.ts       # KiloLend Comptroller contract
 │   ├── ctoken.ts           # KiloLend cToken contracts
@@ -149,6 +153,17 @@ KAIA_NETWORK="kaia"                                  # Network (only kaia suppor
 | `repay_borrow` | Repay borrowed positions |
 | `redeem_tokens` | Redeem cTokens (withdraw by cToken amount) |
 | `redeem_underlying` | Redeem underlying tokens (withdraw by underlying amount) |
+
+### Price API Tools
+
+#### Read-Only Tools
+| Tool | Description |
+|------|-------------|
+| `get_all_prices` | Get all available prices from KiloLend price API |
+| `get_token_prices` | Get prices for specific tokens (e.g., ['KAIA', 'BTC', 'ETH']) |
+| `get_kaia_ecosystem_prices` | Get KAIA ecosystem token prices only (KAIA, BORA, MBX, SIX, SOMNIA, stKAIA) |
+| `get_major_crypto_prices` | Get major cryptocurrency prices (BTC, ETH) |
+| `get_quick_prices` | Quick price overview of KAIA, BTC, and ETH |
 
 ### DragonSwap Tools
 
