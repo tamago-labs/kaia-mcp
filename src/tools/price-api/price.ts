@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const PRICE_API_URL = 'https://kvxdikvk5b.execute-api.ap-southeast-1.amazonaws.com/prod/prices';
+import { apiConfig } from '../../config';
+
+const PRICE_API_URL = apiConfig.priceUrl
 
 // Token symbol mapping for better user experience
 const TOKEN_SYMBOL_MAP: Record<string, string> = {
