@@ -242,14 +242,30 @@ export class WalletAgent {
           const exchangeRate = parseFloat(marketData.exchangeRate) / 1e18;
           const supplyRatePerBlock = parseFloat(marketData.supplyRatePerBlock);
           const borrowRatePerBlock = parseFloat(marketData.borrowRatePerBlock);
-          const totalSupply = parseFloat(marketData.totalSupply) / 1e18;
-          const totalBorrows = parseFloat(marketData.totalBorrows) / 1e18;
-          const cash = parseFloat(marketData.cash) / 1e18;
+          const totalSupply = parseFloat(marketData.totalSupply) / (symbol === "USDT" ? 1e6 : 1e18);
+          const totalBorrows = parseFloat(marketData.totalBorrows) / (symbol === "USDT" ? 1e6 : 1e18);
+          const cash = parseFloat(marketData.cash) / (symbol === "USDT" ? 1e6 : 1e18);
 
           // Convert block rates to APY (assuming 1 block per second on KAIA)
-          const blocksPerYear = 31536000;
-          const supplyApy = (Math.pow(1 + supplyRatePerBlock / 1e18, blocksPerYear) - 1) * 100;
-          const borrowApy = (Math.pow(1 + borrowRatePerBlock / 1e18, blocksPerYear) - 1) * 100;
+          // const blocksPerYear = 31536000;
+          // const supplyApy = (Math.pow(1 + supplyRatePerBlock / 1e18, blocksPerYear) - 1) * 100;
+          // const borrowApy = (Math.pow(1 + borrowRatePerBlock / 1e18, blocksPerYear) - 1) * 100;
+
+          // Blocks per year (~2s block time on Kaia)
+          const blocksPerYear = BigInt(365 * 24 * 60 * 60 / 2);
+
+          // APY calculations
+          const scale = BigInt(10) ** BigInt(18);
+
+          // Calculate supply APY
+          const supplyApy = Number(
+            (BigInt(supplyRatePerBlock) * blocksPerYear * BigInt(10000)) / scale
+          ) / 100;
+
+          // Calculate borrow APR
+          const borrowApy = Number(
+            (BigInt(borrowRatePerBlock) * blocksPerYear * BigInt(10000)) / scale
+          ) / 100;
 
           const utilization = (totalSupply * exchangeRate) > 0 ?
             (totalBorrows / (totalSupply * exchangeRate)) * 100 : 0;
