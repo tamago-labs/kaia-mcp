@@ -99,4 +99,4 @@ export const COMPTROLLER_ABI: Abi = [
 // Export ABI with alias
 export const comptrollerAbi = COMPTROLLER_ABI;
 
-export const COMPTROLLER_ADDRESS = "0x0B5f0Ba5F13eA4Cb9C8Ee48FB75aa22B451470C2" as const;
+export const COMPTROLLER_ADDRESS = "0x2591d179a0B1dB1c804210E111035a3a13c95a48" as const;
