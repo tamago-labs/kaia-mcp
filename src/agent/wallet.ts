@@ -3,6 +3,7 @@ import { privateKeyToAccount, type Account } from 'viem/accounts';
 import { kaia } from 'viem/chains';
 import { publicClient, networkInfo, apiConfig, DRAGONSWAP_CONTRACTS, SWAP_TOKENS, FEE_TIERS, DEFAULT_SLIPPAGE, DEFAULT_DEADLINE } from '../config';
 import { formatTokenAmount } from '../utils/formatting';
+import { getAddress } from 'viem'
 import {
   COMPTROLLER_ADDRESS,
   COMPTROLLER_ABI
@@ -10,7 +11,8 @@ import {
 import {
   CTOKEN_ABI,
   SYMBOL_TO_CTOKEN,
-  TOKEN_ADDRESSES
+  TOKEN_ADDRESSES,
+  TOKEN_SYMBOLS
 } from '../contracts/ctoken';
 import { ERC20_ABI } from '../contracts/erc20';
 import { WKAIA_ADDRESS, WKAIA_ABI } from '../contracts/wkaia';
@@ -309,19 +311,18 @@ export class WalletAgent {
         address: COMPTROLLER_ADDRESS,
         abi: COMPTROLLER_ABI,
         functionName: 'getAccountLiquidity',
-        args: [address]
+        args: [ getAddress(address) ]
       }) as [bigint, bigint, bigint];
 
       if (Number(error) !== 0) {
         throw new Error(`Comptroller error: ${error}`);
       }
-
       // Get user's positions
       const assetsIn = await publicClient.readContract({
         address: COMPTROLLER_ADDRESS,
         abi: COMPTROLLER_ABI,
         functionName: 'getAssetsIn',
-        args: [address]
+        args: [ getAddress(address) ]
       }) as Address[];
 
       const positions = [];
@@ -330,7 +331,7 @@ export class WalletAgent {
 
       for (const cTokenAddress of assetsIn) {
         try {
-          const position = await this.getUserPosition(cTokenAddress, address);
+          const position = await this.getUserPosition(cTokenAddress, address); 
           if (position) {
             positions.push(position);
             totalCollateralUSD += position.supplyValueUSD;
@@ -340,7 +341,7 @@ export class WalletAgent {
           console.error(`Failed to get position for ${cTokenAddress}:`, error);
         }
       }
-
+ 
       const healthFactor = totalBorrowUSD > 0 ? totalCollateralUSD / totalBorrowUSD : 999;
 
       return {
@@ -363,13 +364,13 @@ export class WalletAgent {
           address: cTokenAddress,
           abi: CTOKEN_ABI,
           functionName: 'getAccountSnapshot',
-          args: [userAddress]
+          args: [ getAddress(userAddress) ]
         }),
         publicClient.readContract({
           address: cTokenAddress,
           abi: CTOKEN_ABI,
           functionName: 'balanceOf',
-          args: [userAddress]
+          args: [  getAddress(userAddress) ]
         })
       ]) as [[bigint, bigint, bigint, bigint], bigint];
 
@@ -380,7 +381,7 @@ export class WalletAgent {
       }
 
       const supplyBalance = (cTokenBalance * exchangeRateMantissa) / 10n ** 18n;
-      const marketSymbol = this.findMarketSymbolByCToken(cTokenAddress);
+      const marketSymbol = TOKEN_SYMBOLS[cTokenAddress as keyof typeof TOKEN_SYMBOLS] || 'UNKNOWN';
       const price = await this.getTokenPrice(marketSymbol);
 
       return {
@@ -394,7 +395,7 @@ export class WalletAgent {
         collateralFactor: '75.0',
         isCollateral: true
       };
-    } catch (error) {
+    } catch (error) { 
       return null;
     }
   }
@@ -1521,18 +1522,6 @@ export class WalletAgent {
         STAKED_KAIA: 0.112 // Current approximate price
       };
     }
-  }
-
-  private findMarketSymbolByCToken(cTokenAddress: Address): string {
-    const symbolMap: Record<string, string> = {
-      '0x498823F094f6F2121CcB4e09371a57A96d619695': 'USDT',
-      '0xC468dFD0C96691035B3b1A4CA152Cb64F0dbF64c': 'SIX',
-      '0x7a937C07d49595282c711FBC613c881a83B9fDFD': 'BORA',
-      '0xE321e20F0244500A194543B1EBD8604c02b8fA85': 'MBX',
-      '0x98Ab86C97Ebf33D28fc43464353014e8c9927aB3': 'KAIA',
-      '0x0BC926EF3856542134B06DCf53c86005b08B9625': 'STAKED_KAIA'
-    };
-    return symbolMap[cTokenAddress as string] || 'UNKNOWN';
   }
 
   private async getTokenPrice(symbol: string): Promise<number> {

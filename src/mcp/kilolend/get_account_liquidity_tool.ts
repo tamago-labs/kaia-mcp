@@ -23,29 +23,26 @@ export const GetAccountLiquidityTool: McpTool = {
             }
             
             const liquidityInfo = await agent.getAccountLiquidity(accountAddress as any);
-            
-            const liquidity = parseFloat(liquidityInfo.liquidity) / 1e18;
-            const shortfall = parseFloat(liquidityInfo.shortfall) / 1e18;
-            const healthFactor = shortfall > 0 ? 0 : (liquidity > 0 ? 2.0 : 1.0); // Simplified calculation
 
             return {
                 status: "success",
                 message: "✅ Account liquidity information retrieved",
                 account_address: accountAddress,
                 liquidity_info: {
-                    liquidity: liquidity.toFixed(6),
-                    shortfall: shortfall.toFixed(6),
-                    health_factor: healthFactor.toFixed(2),
-                    can_borrow: liquidity > 0 && shortfall === 0,
-                    at_risk_liquidation: healthFactor < 1.5
+                    liquidity: Number(liquidityInfo.liquidity).toFixed(6),
+                    shortfall: Number(liquidityInfo.shortfall).toFixed(6),
+                    health_factor: Number(liquidityInfo.healthFactor).toFixed(2),
+                    can_borrow: Number(liquidityInfo.liquidity) > 0 && Number(liquidityInfo.shortfall) === 0,
+                    at_risk_liquidation: Number(liquidityInfo.healthFactor) < 1.4
                 },
-                recommendations: shortfall > 0
+                positions: liquidityInfo.positions,
+                recommendations: Number(liquidityInfo.shortfall) > 0
                     ? [
                         "⚠️ Account has shortfall - at risk of liquidation",
                         "Repay borrowed assets or supply more collateral",
                         "Consider reducing borrowed positions"
                     ]
-                    : healthFactor < 1.5
+                    : Number(liquidityInfo.healthFactor) < 1.4
                     ? [
                         "⚠️ Low health factor - close to liquidation threshold",
                         "Monitor positions closely",

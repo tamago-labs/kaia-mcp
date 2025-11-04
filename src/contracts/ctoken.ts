@@ -40,7 +40,7 @@ export const CTOKEN_ABI: Abi = [
     stateMutability: "nonpayable",
     type: "function"
   },
-  
+
   // CToken specific functions
   {
     inputs: [],
@@ -98,7 +98,7 @@ export const CTOKEN_ABI: Abi = [
     stateMutability: "view",
     type: "function"
   },
-  
+
   // User functions
   {
     inputs: [{ internalType: "uint256", name: "mintAmount", type: "uint256" }],
@@ -145,7 +145,7 @@ export const CTOKEN_ABI: Abi = [
     stateMutability: "payable",
     type: "function"
   },
-  
+
   // Account data
   {
     inputs: [{ internalType: "address", name: "account", type: "address" }],
@@ -161,7 +161,20 @@ export const CTOKEN_ABI: Abi = [
     stateMutability: "nonpayable",
     type: "function"
   },
-  
+
+  {
+    inputs: [{ internalType: "address", name: "account", type: "address" }],
+    name: "getAccountSnapshot",
+    outputs: [
+      { internalType: "uint256", name: "", type: "uint256" },
+      { internalType: "uint256", name: "", type: "uint256" },
+      { internalType: "uint256", name: "", type: "uint256" },
+      { internalType: "uint256", name: "", type: "uint256" }
+    ],
+    stateMutability: "view",
+    type: "function"
+  },
+
   // Comptroller
   {
     inputs: [],
