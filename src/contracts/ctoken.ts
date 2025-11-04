@@ -172,6 +172,8 @@ export const CTOKEN_ABI: Abi = [
   }
 ] as const;
 
+
+
 // CToken addresses on KAIA mainnet
 export const CTOKEN_ADDRESSES = {
   cUSDT: "0x20A2Cbc68fbee094754b2F03d15B1F5466f1F649" as const,

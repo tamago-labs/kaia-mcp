@@ -677,16 +677,30 @@ export class WalletAgent {
       }
       const amountWei = parseUnits(amount, decimals);
 
-      const txHash = await this.walletClient!.writeContract({
-        address: cTokenAddress,
-        abi: CTOKEN_ABI,
-        functionName: 'mint',
-        args: [amountWei],
-        account: this.account!,
-        chain: kaia
-      });
-
-      return txHash;
+      // Handle native KAIA differently - send value with transaction, no parameters
+      if (tokenSymbol === 'KAIA') {
+        const txHash = await this.walletClient!.writeContract({
+          address: cTokenAddress,
+          abi: CTOKEN_ABI,
+          functionName: 'mint',
+          args: [], // No parameters for native KAIA
+          account: this.account!,
+          chain: kaia,
+          value: amountWei // Send KAIA as transaction value
+        });
+        return txHash;
+      } else {
+        // For ERC20 tokens, call mint with amount parameter
+        const txHash = await this.walletClient!.writeContract({
+          address: cTokenAddress,
+          abi: CTOKEN_ABI,
+          functionName: 'mint',
+          args: [amountWei],
+          account: this.account!,
+          chain: kaia
+        });
+        return txHash;
+      }
     } catch (error) {
       throw handleContractError(error);
     }
@@ -741,16 +755,30 @@ export class WalletAgent {
       const amountWei = amount ? parseUnits(amount, 18) :
         BigInt('115792089237316195423570985008687907853269984665640564039457584007913129639935');
 
-      const txHash = await this.walletClient!.writeContract({
-        address: cTokenAddress,
-        abi: CTOKEN_ABI,
-        functionName: 'repayBorrow',
-        args: [amountWei],
-        account: this.account!,
-        chain: kaia
-      });
-
-      return txHash;
+      // Handle native KAIA differently - send value with transaction, no parameters
+      if (tokenSymbol === 'KAIA') {
+        const txHash = await this.walletClient!.writeContract({
+          address: cTokenAddress,
+          abi: CTOKEN_ABI,
+          functionName: 'repayBorrow',
+          args: [], // No parameters for native KAIA
+          account: this.account!,
+          chain: kaia,
+          value: amountWei // Send KAIA as transaction value
+        });
+        return txHash;
+      } else {
+        // For ERC20 tokens, call repayBorrow with amount parameter
+        const txHash = await this.walletClient!.writeContract({
+          address: cTokenAddress,
+          abi: CTOKEN_ABI,
+          functionName: 'repayBorrow',
+          args: [amountWei],
+          account: this.account!,
+          chain: kaia
+        });
+        return txHash;
+      }
     } catch (error) {
       throw handleContractError(error);
     }
