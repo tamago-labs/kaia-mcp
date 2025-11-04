@@ -681,7 +681,13 @@ export class WalletAgent {
       if (tokenSymbol === 'KAIA') {
         const txHash = await this.walletClient!.writeContract({
           address: cTokenAddress,
-          abi: CTOKEN_ABI,
+          abi: [{
+            "inputs": [],
+            "name": "mint",
+            "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+            "stateMutability": "payable",
+            "type": "function"
+          }],
           functionName: 'mint',
           args: [], // No parameters for native KAIA
           account: this.account!,
@@ -759,7 +765,13 @@ export class WalletAgent {
       if (tokenSymbol === 'KAIA') {
         const txHash = await this.walletClient!.writeContract({
           address: cTokenAddress,
-          abi: CTOKEN_ABI,
+          abi: [{
+            "inputs": [],
+            "name": "repayBorrow",
+            "outputs": [],
+            "stateMutability": "payable",
+            "type": "function"
+          }],
           functionName: 'repayBorrow',
           args: [], // No parameters for native KAIA
           account: this.account!,
