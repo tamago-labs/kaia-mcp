@@ -15,7 +15,7 @@ Built on the **Model Context Protocol (MCP)**, it connects tools like **Claude D
 ### Multi-Protocol Support
 - **Lending:** KiloLend (Compound v2 fork) for supply, borrow, and repay  
 - **DEX:** DragonSwap V3 for quotes and swaps  
-- **Price API:** Real-time token prices from KiloLend price feed  
+- **Price API:** Real-time token prices from CoinMarketCap & CoinGecko API  
 - **AI-Managed Vaults:** Automated cross-protocol strategies to boost yield *(planned)*  
 - **Market Intelligence:** Real-time APYs, utilization, and TVL  
 - **Smart Wallet:** Unified position and balance tracking  
