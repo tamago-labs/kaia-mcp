@@ -12,7 +12,9 @@ import {
   CTOKEN_ABI,
   SYMBOL_TO_CTOKEN,
   TOKEN_ADDRESSES,
-  TOKEN_SYMBOLS
+  TOKEN_SYMBOLS,
+  TOKEN_DECIMALS,
+  COLLATERAL_FACTORS
 } from '../contracts/ctoken';
 import { ERC20_ABI } from '../contracts/erc20';
 import { WKAIA_ADDRESS, WKAIA_ABI } from '../contracts/wkaia';
@@ -240,13 +242,15 @@ export class WalletAgent {
           const marketData = await this.getMarketData(cTokenAddress as Address);
           const price = prices[symbol] || 0;
 
-          // Calculate real values
+          // Calculate real values using correct decimals for each token
           const exchangeRate = parseFloat(marketData.exchangeRate) / 1e18;
           const supplyRatePerBlock = parseFloat(marketData.supplyRatePerBlock);
           const borrowRatePerBlock = parseFloat(marketData.borrowRatePerBlock);
-          const totalSupply = parseFloat(marketData.totalSupply) / (symbol === "USDT" ? 1e6 : 1e18);
-          const totalBorrows = parseFloat(marketData.totalBorrows) / (symbol === "USDT" ? 1e6 : 1e18);
-          const cash = parseFloat(marketData.cash) / (symbol === "USDT" ? 1e6 : 1e18);
+          const tokenDecimals = this.getKiloLendTokenDecimals(symbol);
+          const decimalDivisor = Math.pow(10, tokenDecimals);
+          const totalSupply = parseFloat(marketData.totalSupply) / decimalDivisor;
+          const totalBorrows = parseFloat(marketData.totalBorrows) / decimalDivisor;
+          const cash = parseFloat(marketData.cash) / decimalDivisor;
 
           // Convert block rates to APY (assuming 1 block per second on KAIA)
           // const blocksPerYear = 31536000;
@@ -384,15 +388,26 @@ export class WalletAgent {
       const marketSymbol = TOKEN_SYMBOLS[cTokenAddress as keyof typeof TOKEN_SYMBOLS] || 'UNKNOWN';
       const price = await this.getTokenPrice(marketSymbol);
 
+      // FIXED: Get correct decimals for the token to handle USDT (6 decimals) vs others (18 decimals)
+      const tokenDecimals = this.getKiloLendTokenDecimals(marketSymbol);
+      const decimalDivisor = Math.pow(10, tokenDecimals);
+
+      // FIXED: Use correct decimal divisor for each token
+      const supplyBalanceFormatted = Number(supplyBalance) / decimalDivisor;
+      const borrowBalanceFormatted = Number(borrowBalance) / decimalDivisor;
+
+      // FIXED: Get correct collateral factor for each token
+      const collateralFactor = COLLATERAL_FACTORS[marketSymbol as keyof typeof COLLATERAL_FACTORS] || 75.0;
+
       return {
         cTokenAddress,
         symbol: marketSymbol,
         underlyingSymbol: marketSymbol,
-        supplyBalance: (Number(supplyBalance) / 1e18).toString(),
-        borrowBalance: (Number(borrowBalance) / 1e18).toString(),
-        supplyValueUSD: (Number(supplyBalance) / 1e18) * price,
-        borrowValueUSD: (Number(borrowBalance) / 1e18) * price,
-        collateralFactor: '75.0',
+        supplyBalance: supplyBalanceFormatted.toString(),
+        borrowBalance: borrowBalanceFormatted.toString(),
+        supplyValueUSD: supplyBalanceFormatted * price,
+        borrowValueUSD: borrowBalanceFormatted * price,
+        collateralFactor: collateralFactor.toString(),
         isCollateral: true
       };
     } catch (error) { 
@@ -497,12 +512,8 @@ export class WalletAgent {
     }
 
     try {
-      // Get proper decimals for the token
-      let decimals = 18; // Default
-      if (tokenSymbol === 'USDT') {
-        decimals = 6; // USDT has 6 decimals
-      }
-
+      // Get correct decimals for the token (FIXED: Use centralized mapping)
+      const decimals = this.getKiloLendTokenDecimals(tokenSymbol);
       const amountWei = amount ? parseUnits(amount, decimals) :
         BigInt('115792089237316195423570985008687907853269984665640564039457584007913129639935'); // Max uint256
 
@@ -622,11 +633,8 @@ export class WalletAgent {
     }
 
     try {
-      // Get proper decimals for the token
-      let decimals = 18; // Default
-      if (tokenSymbol === 'USDT') {
-        decimals = 6; // USDT has 6 decimals
-      }
+      // Get correct decimals for the token (FIXED: Use centralized mapping)
+      const decimals = this.getKiloLendTokenDecimals(tokenSymbol);
 
       const txHash = await this.walletClient!.writeContract({
         address: tokenAddress,
@@ -658,25 +666,18 @@ export class WalletAgent {
         await this.enterMarkets([cTokenAddress]);
       }
 
+      // Get correct decimals for the token (FIXED: Use centralized mapping)
+      const decimals = this.getKiloLendTokenDecimals(tokenSymbol);
+      const amountWei = parseUnits(amount, decimals);
+
       // For ERC20 tokens, check and handle allowance
       if (tokenSymbol !== 'KAIA') {
         const currentAllowance = await this.checkAllowance(tokenSymbol, cTokenAddress);
-        let decimals = 18; // Default
-        if (tokenSymbol === 'USDT') {
-          decimals = 6; // USDT has 6 decimals
-        }
-        const amountWei = parseUnits(amount, decimals);
 
         if (BigInt(currentAllowance) < amountWei) {
           await this.approveToken(tokenSymbol, cTokenAddress);
         }
       }
-
-      let decimals = 18; // Default
-      if (tokenSymbol === 'USDT') {
-        decimals = 6; // USDT has 6 decimals
-      }
-      const amountWei = parseUnits(amount, decimals);
 
       // Handle native KAIA differently - send value with transaction, no parameters
       if (tokenSymbol === 'KAIA') {
@@ -722,7 +723,9 @@ export class WalletAgent {
     }
 
     try {
-      const amountWei = parseUnits(amount, 18);
+      // Get correct decimals for the token (FIXED: USDT uses 6 decimals, not 18)
+      const decimals = this.getKiloLendTokenDecimals(tokenSymbol);
+      const amountWei = parseUnits(amount, decimals);
 
       const txHash = await this.walletClient!.writeContract({
         address: cTokenAddress,
@@ -748,19 +751,19 @@ export class WalletAgent {
     }
 
     try {
+      // Get correct decimals for the token (FIXED: USDT uses 6 decimals, not 18)
+      const decimals = this.getKiloLendTokenDecimals(tokenSymbol);
+      const amountWei = amount ? parseUnits(amount, decimals) :
+        BigInt('115792089237316195423570985008687907853269984665640564039457584007913129639935');
+
       // For ERC20 tokens, check and handle allowance
       if (tokenSymbol !== 'KAIA') {
         const currentAllowance = await this.checkAllowance(tokenSymbol, cTokenAddress);
-        const amountWei = amount ? parseUnits(amount, 18) :
-          BigInt('115792089237316195423570985008687907853269984665640564039457584007913129639935');
 
         if (BigInt(currentAllowance) < amountWei) {
           await this.approveToken(tokenSymbol, cTokenAddress);
         }
       }
-
-      const amountWei = amount ? parseUnits(amount, 18) :
-        BigInt('115792089237316195423570985008687907853269984665640564039457584007913129639935');
 
       // Handle native KAIA differently - send value with transaction, no parameters
       if (tokenSymbol === 'KAIA') {
@@ -844,12 +847,8 @@ export class WalletAgent {
     }
 
     try {
-      // Get proper decimals for the token
-      let decimals = 18; // Default
-      if (tokenSymbol === 'USDT') {
-        decimals = 6; // USDT has 6 decimals
-      }
-
+      // Get correct decimals for the token (FIXED: Use centralized mapping)
+      const decimals = this.getKiloLendTokenDecimals(tokenSymbol);
       const underlyingAmountWei = parseUnits(underlyingAmount, decimals);
 
       const txHash = await this.walletClient!.writeContract({
@@ -1415,6 +1414,19 @@ export class WalletAgent {
     if (this.isReadonly) {
       throw new Error('This operation requires transaction mode. Provide a private key to enable transactions.');
     }
+  }
+
+  /**
+   * Get the correct number of decimals for a KiloLend token
+   * @param tokenSymbol The token symbol (e.g., 'USDT', 'KAIA', 'BORA')
+   * @returns Number of decimals for the token
+   */
+  private getKiloLendTokenDecimals(tokenSymbol: string): number {
+    const decimals = TOKEN_DECIMALS[tokenSymbol as keyof typeof TOKEN_DECIMALS];
+    if (decimals === undefined) {
+      throw new ValidationError(`Token ${tokenSymbol} not supported in KiloLend`);
+    }
+    return decimals;
   }
 
   async getTokenBalance(tokenAddress: Address, accountAddress: Address): Promise<bigint> {

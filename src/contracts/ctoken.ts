@@ -237,5 +237,26 @@ export const TOKEN_ADDRESSES = {
   'STAKED_KAIA': UNDERLYING_ADDRESSES.STAKED_KAIA
 } as const;
 
+// Token decimals mapping for KiloLend tokens
+export const TOKEN_DECIMALS = {
+  'USDT': 6,
+  'SIX': 18,
+  'BORA': 18,
+  'MBX': 18,
+  'KAIA': 18,
+  'STAKED_KAIA': 18
+} as const;
+
+// Collateral factors mapping (from smart contract constants)
+// Values are in percentage format (e.g., 85.0 for 85%)
+export const COLLATERAL_FACTORS: Record<string, number> = {
+  'USDT': 85.0,        // 0.85e18 from contract
+  'KAIA': 75.0,        // 0.75e18 from contract
+  'STAKED_KAIA': 70.0,  // 0.70e18 from contract
+  'SIX': 70.0,         // 0.70e18 from contract
+  'BORA': 70.0,        // 0.70e18 from contract
+  'MBX': 70.0          // 0.70e18 from contract
+};
+
 // Export ABI with alias
 export const cTokenAbi = CTOKEN_ABI;
