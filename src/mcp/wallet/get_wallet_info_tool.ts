@@ -10,6 +10,22 @@ const TOKEN_MEMOS: Record<string, string> = {
     'STAKED_KAIA' : 'Lair Staked KAIA (stKAIA)'
 };
 
+// Protocol information
+const SUPPORTED_PROTOCOLS = {
+    kilolend: {
+        name: 'KiloLend',
+        description: 'Lending protocol for supply, borrow, and earn interest',
+        operations: ['supply', 'borrow', 'repay', 'redeem', 'check_liquidity'],
+        supportedTokens: ['KAIA', 'USDT', 'SIX', 'BORA', 'MBX', 'STAKED_KAIA']
+    },
+    dragonswap: {
+        name: 'DragonSwap V3',
+        description: 'Decentralized exchange for token swaps',
+        operations: ['swap', 'get_quote', 'pool_info', 'get_route'],
+        supportedTokens: ['KAIA', 'WKAIA', 'USDT', 'BORA', 'MBX', 'STAKED_KAIA', 'RKLAY', 'WETH', 'BTCB']
+    }
+};
+
 export const GetWalletInfoTool: McpTool = {
     name: "kaia_get_wallet_info",
     description: "Get comprehensive wallet information including all token balances",
@@ -31,43 +47,41 @@ export const GetWalletInfoTool: McpTool = {
                 memo: TOKEN_MEMOS[token.symbol] || null
             }));
 
-            // Generate recommendations based on portfolio
+            // Generate concise protocol-specific recommendations
             const recommendations = [];
+            const userTokens = walletInfo.tokens.map((t: any) => t.symbol);
+            const kilolendTokens = userTokens.filter(token => SUPPORTED_PROTOCOLS.kilolend.supportedTokens.includes(token));
+            const dragonswapTokens = userTokens.filter(token => SUPPORTED_PROTOCOLS.dragonswap.supportedTokens.includes(token));
 
+            // Balance status
             if (balanceInNative < 0.01) {
-                recommendations.push(
-                    `⚠️ Low ${nativeCurrency} balance detected`,
-                    `Fund wallet with at least 0.01 ${nativeCurrency} for KAIA-MCP operations`,
-                    "Gas fees required for all KAIA-MCP Protocol operations",
-                    `Current balance: ${walletInfo.nativeBalance}`
-                );
+                recommendations.push(`⚠️ Low KAIA balance (${walletInfo.nativeBalance}) - add 0.01 KAIA for operations`);
             } else {
-                recommendations.push(
-                    "✅ Wallet has sufficient balance for operations",
-                    "Ready to supply assets to KAIA-MCP",
-                    "Ready to borrow from KAIA-MCP markets"
-                );
+                recommendations.push("✅ Ready for KiloLend (lending) & DragonSwap (DEX) operations");
             }
 
-            if (totalPortfolioUSD > 0) {
-                recommendations.push(
-                    `💰 Total portfolio value: $${totalPortfolioUSD.toFixed(2)} USD`,
-                    `🪙 Holding ${walletInfo.tokens.length} different tokens`
-                );
+            // Protocol opportunities with brief descriptions
+            if (kilolendTokens.length > 0) {
+                recommendations.push(`🏦 Supply ${kilolendTokens.slice(0, 2).join(', ')}${kilolendTokens.length > 2 ? '...' : ''} to KiloLend (lending protocol) for interest`);
             }
 
-            // Check for WKAIA balance specifically
+            if (dragonswapTokens.length > 1) {
+                recommendations.push(`🐉 Swap ${dragonswapTokens.slice(0, 2).join(' ↔ ')}${dragonswapTokens.length > 2 ? '...' : ''} on DragonSwap (DEX)`);
+            }
+
+            // Key token opportunities
+            if (userTokens.includes('USDT')) {
+                recommendations.push("💡 Supply USDT for stable interest on KiloLend (lending)");
+            }
+
             const wkaiaToken = walletInfo.tokens.find((t: any) => t.symbol === 'WKAIA');
             if (wkaiaToken && parseFloat(wkaiaToken.balance) > 0) {
-                recommendations.push(
-                    `🔄 WKAIA detected: ${wkaiaToken.balance} WKAIA ($${wkaiaToken.balanceUSD})`,
-                    "You can unwrap WKAIA to get native KAIA if needed"
-                );
+                recommendations.push("🔄 Use WKAIA for DragonSwap (DEX) trades or supply to KiloLend (lending)");
             }
 
             return {
                 status: "success",
-                message: "✅ Comprehensive wallet information retrieved successfully",
+                message: "✅ Wallet information retrieved",
                 wallet_details: {
                     ...walletInfo,
                     tokenBalances
@@ -86,7 +100,7 @@ export const GetWalletInfoTool: McpTool = {
                     native_balance_usd: `$${walletInfo.nativeBalanceUSD}`,
                     token_count: walletInfo.tokens.length,
                     has_wkaia: !!wkaiaToken,
-                    top_tokens: tokenBalances.slice(0, 5) // Top 5 tokens by value
+                    top_tokens: tokenBalances.slice(0, 5)
                 },
                 recommendations
             };
