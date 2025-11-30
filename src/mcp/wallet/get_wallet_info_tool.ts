@@ -2,6 +2,14 @@ import { z } from "zod";
 import { WalletAgent } from "../../agent/wallet";
 import { type McpTool } from "../../types";
 
+// Token memo descriptions
+const TOKEN_MEMOS: Record<string, string> = {
+    'USDT': 'Official USD₮ from Tether',
+    'RKLAY': 'Reward Klay from Dragon swap',
+    'WETH': 'Wormhole ETH',
+    'STAKED_KAIA' : 'Lair Staked KAIA (stKAIA)'
+};
+
 export const GetWalletInfoTool: McpTool = {
     name: "kaia_get_wallet_info",
     description: "Get comprehensive wallet information including all token balances",
@@ -19,12 +27,13 @@ export const GetWalletInfoTool: McpTool = {
                 balance: parseFloat(token.balance).toFixed(6),
                 balanceUSD: `$${token.balanceUSD}`,
                 price: token.price ? `$${token.price.toFixed(6)}` : 'N/A',
-                address: token.address
+                address: token.address,
+                memo: TOKEN_MEMOS[token.symbol] || null
             }));
 
             // Generate recommendations based on portfolio
             const recommendations = [];
-            
+
             if (balanceInNative < 0.01) {
                 recommendations.push(
                     `⚠️ Low ${nativeCurrency} balance detected`,
