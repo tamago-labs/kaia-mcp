@@ -5,7 +5,7 @@ import { networkInfo } from "../../config";
 import { SYMBOL_TO_CTOKEN } from "../../contracts/ctoken";
 
 export const ApproveTokenTool: McpTool = {
-    name: "kaia_approve_token",
+    name: "kilolend_approve_token",
     description: "Approve token for KiloLend operations",
     schema: {
         token_symbol: z.string()

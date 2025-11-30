@@ -3,8 +3,8 @@ import { WalletAgent } from "../../agent/wallet";
 import { type McpTool } from "../../types";
 
 export const GetAccountLiquidityTool: McpTool = {
-    name: "kaia_get_account_liquidity",
-    description: "Check account liquidity, health factor, and borrowing capacity",
+    name: "kilolend_get_account_liquidity",
+    description: "Check account liquidity, health factor, and borrowing capacity on KiloLend",
     schema: {
         account_address: z.string()
             .optional()

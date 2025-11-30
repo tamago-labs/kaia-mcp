@@ -3,14 +3,14 @@ import { WalletAgent } from "../../agent/wallet";
 import { type McpTool } from "../../types";
 
 export const GetProtocolStatsTool: McpTool = {
-    name: "kaia_get_lending_stats",
-    description: "Get overall protocol statistics and TVL information",
+    name: "kilolend_get_lending_stats",
+    description: "Get overall KiloLend protocol statistics and TVL information",
     schema: {},
     handler: async (agent: WalletAgent, input: Record<string, any>) => {
         try {
             // Use the getAllMarkets method to get market data
             const markets = await agent.getAllMarkets();
-            
+
             let totalSupplyUSD = 0;
             let totalBorrowsUSD = 0;
             let totalCashUSD = 0;
@@ -20,19 +20,19 @@ export const GetProtocolStatsTool: McpTool = {
                 try {
                     // Use the price already included in market data from getAllMarkets()
                     const price = market.price || 0;
-                    
+
                     const totalSupply = parseFloat(market.totalSupply);
                     const totalBorrows = parseFloat(market.totalBorrows);
                     const cash = parseFloat(market.cash);
-                    
+
                     const supplyValueUSD = totalSupply * price;
                     const borrowValueUSD = totalBorrows * price;
                     const cashValueUSD = cash * price;
-                    
+
                     totalSupplyUSD += supplyValueUSD;
                     totalBorrowsUSD += borrowValueUSD;
                     totalCashUSD += cashValueUSD;
-                    
+
                     marketStats.push({
                         symbol: market.symbol,
                         underlying: market.underlyingSymbol,

@@ -8,7 +8,7 @@ import { SWAP_TOKENS } from "../../config";
  */
 export const GetRouteTool: McpTool = {
   name: "dragonswap_get_route",
-  description: "Get the best routing path for swapping tokens (supports multi-hop for better prices)",
+  description: "Get the best routing path for swapping tokens (supports multi-hop for better prices) on DragonSwap V3 DEX",
   schema: {
     tokenIn: z.string()
       .describe("Input token address or symbol (e.g., 'KAIA', 'USDT', '0x1234...')"),

@@ -7,7 +7,7 @@ import { type McpTool } from "../../types";
  */
 export const ExecuteSwapTool: McpTool = {
   name: "dragonswap_execute_swap",
-  description: "Execute a token swap on DragonSwap V3 DEX (requires private key)",
+  description: "Execute a token swap on DragonSwap V3 DEX",
   schema: {
     tokenIn: z.string()
       .describe("Input token address or symbol (e.g., 'KAIA', 'USDT', '0x1234...')"),

@@ -4,8 +4,8 @@ import { type McpTool } from "../../types";
 import { networkInfo } from "../../config";
 
 export const RedeemUnderlyingTool: McpTool = {
-    name: "kaia_redeem_underlying",
-    description: "Redeem underlying tokens from a KAIA-MCP lending market (specify underlying token amount)",
+    name: "kilolend_redeem_underlying",
+    description: "Redeem underlying tokens from a KiloLend lending market (specify underlying token amount)",
     schema: {
         token_symbol: z.string()
             .describe("Token symbol to redeem (e.g., KAIA, USDT, BORA, SIX, MBX, STAKED_KAIA)"),

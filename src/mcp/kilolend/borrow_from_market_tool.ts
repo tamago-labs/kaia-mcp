@@ -4,8 +4,8 @@ import { type McpTool } from "../../types";
 import { networkInfo } from "../../config";
 
 export const BorrowFromMarketTool: McpTool = {
-    name: "kaia_borrow_from_lending",
-    description: "Borrow tokens from a KAIA-MCP lending market",
+    name: "kilolend_borrow_from_lending",
+    description: "Borrow tokens from a KiloLend lending market",
     schema: {
         token_symbol: z.string()
             .describe("Token symbol to borrow (e.g., KAIA, USDT, BORA, SIX, MBX, STAKED_KAIA)"),

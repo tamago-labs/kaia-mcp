@@ -5,7 +5,7 @@ import { networkInfo } from "../../config";
 import { SYMBOL_TO_CTOKEN } from "../../contracts/ctoken";
 
 export const EnterMarketTool: McpTool = {
-    name: "kaia_enter_market",
+    name: "kilolend_enter_market",
     description: "Enter KiloLend markets to enable collateral usage",
     schema: {
         token_symbols: z.array(z.string())

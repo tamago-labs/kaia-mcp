@@ -3,8 +3,8 @@ import { WalletAgent } from "../../agent/wallet";
 import { type McpTool } from "../../types";
 
 export const GetMarketsTool: McpTool = {
-    name: "kaia_get_lending_markets",
-    description: "Get all lending markets with their current rates and statistics",
+    name: "kilolend_get_lending_markets",
+    description: "Get all lending markets KiloLend with their current rates and statistics",
     schema: {},
     handler: async (agent: WalletAgent, input: Record<string, any>) => {
         try {

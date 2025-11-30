@@ -4,7 +4,7 @@ import { type McpTool } from "../../types";
 import { SYMBOL_TO_CTOKEN } from "../../contracts/ctoken";
 
 export const CheckAllowanceTool: McpTool = {
-    name: "kaia_check_allowance",
+    name: "kilolend_check_allowance",
     description: "Check token allowance for KiloLend operations",
     schema: {
         token_symbol: z.string()
