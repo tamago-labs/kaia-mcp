@@ -92,20 +92,8 @@ export function getEnvironmentConfig(): KAIAMCPEnvironment {
 export function validateEnvironment(): void {
     try {
         const config = getEnvironmentConfig();
-        console.error(`✅ KAIA-MCP environment configuration valid`);
-        console.error(`📍 Mode: ${config.agentMode}`);
-        console.error(`📍 Network: ${config.network}`);
-        console.error(`📍 RPC URL: ${config.kaiaRpcUrl}`);
-        console.error(`📍 Chain ID: ${networkInfo.chainId}`);
-        console.error(`📍 Native Currency: ${networkInfo.nativeCurrency}`);
-        console.error(`📍 Account: ${account.address}`);
-
-        if (config.privateKey) {
-            console.error(`📍 Using provided private key for transactions`);
-        } else {
-            console.error(`📍 No private key provided - read-only mode`);
-        }
-
+        const keyStatus = config.privateKey ? 'with private key' : 'read-only';
+        console.error(`✅ KAIA-MCP configured: ${config.agentMode} mode on ${config.network} network (${keyStatus})`);
     } catch (error) {
         console.error('❌ Invalid environment configuration:', error);
         throw error;

@@ -83,26 +83,8 @@ async function main() {
         const transport = new StdioServerTransport();
         await server.connect(transport);
 
-        console.error("✅ KAIA MCP Server is running!");
-        console.error(`📍 Mode: ${agentMode}`);
-        console.error(`📍 Account: ${account.address}`);
-
         const totalTools = Object.keys(agentMode === 'transaction' ? KaiaWalletTools : KaiaReadOnlyTools).length
-        console.error(`📍 Available tools: ${totalTools}`);
-
-        console.error("🔧 Available capabilities:");
-        if (agentMode === 'transaction') {
-            console.error("   • Wallet operations (send, supply, borrow, repay)");
-            console.error("   • Transaction capabilities with private key");
-        } else {
-            console.error("   • Read-only wallet information");
-            console.error("   • Market data and analytics");
-        }
-        console.error("   • Lending market information");
-        console.error("   • Account liquidity and health checks");
-        console.error("   • Protocol statistics");
-        console.error("   • DragonSwap DEX operations");
-        console.error("🌐 Network: KAIA (Klaytn)");
+        console.error(`✅ KAIA MCP Server running with ${totalTools} tools`);
 
     } catch (error) {
         console.error('❌ Error starting KAIA MCP server:', error);
