@@ -9,3 +9,4 @@ export { ApproveTokenTool } from './approve_token_tool';
 export { EnterMarketTool } from './enter_market_tool';
 export { RedeemTokensTool } from './redeem_tokens_tool';
 export { RedeemUnderlyingTool } from './redeem_underlying_tool';
+export { GetKiloPointsTool } from './get_kilo_points_tool';

@@ -14,7 +14,8 @@ import {
     ApproveTokenTool,
     EnterMarketTool,
     RedeemTokensTool,
-    RedeemUnderlyingTool
+    RedeemUnderlyingTool,
+    GetKiloPointsTool
 } from "./kilolend";
 import { 
     DragonSwapTools, 
@@ -28,6 +29,7 @@ export const KaiaWalletTools = {
     "GetAccountLiquidityTool": GetAccountLiquidityTool,        // Check account health factor and positions
     "GetMarketsTool": GetMarketsTool,                          // Get all lending markets with rates
     "GetProtocolStatsTool": GetProtocolStatsTool,              // Get overall protocol statistics
+    "GetKiloPointsTool": GetKiloPointsTool,                    // Get user KILO points balance and information
 
     // Transaction operations (require private key)
     "SendNativeTokenTool": SendNativeTokenTool,                // Send native KAIA tokens
@@ -56,6 +58,7 @@ export const KaiaReadOnlyTools = {
     "GetAccountLiquidityTool": GetAccountLiquidityTool,
     "GetMarketsTool": GetMarketsTool,
     "GetProtocolStatsTool": GetProtocolStatsTool,
+    "GetKiloPointsTool": GetKiloPointsTool,                    // Get user KILO points balance and information
 
     // DragonSwap read-only operations
     ...DragonSwapReadOnlyTools,                                // DragonSwap quotes, pool info, routing (no private key)
