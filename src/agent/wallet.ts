@@ -879,25 +879,33 @@ export class WalletAgent {
       tokenIn,
       tokenOut,
       amountIn,
-      amountInDecimals = 18,
+      amountInDecimals,
       slippage = DEFAULT_SLIPPAGE
     } = params;
+
+    // Auto-detect decimals if not provided
+    let detectedDecimals = amountInDecimals;
+    if (detectedDecimals === undefined) {
+      const tokenInAddress = this.parseTokenSymbol(tokenIn);
+      detectedDecimals = await this.getSwapTokenDecimals(tokenInAddress);
+    }
 
     // Parse token symbols to addresses
     const tokenInAddress = this.parseTokenSymbol(tokenIn);
     const tokenOutAddress = this.parseTokenSymbol(tokenOut);
 
     // Convert amount to wei
-    const amountInWei = parseUnits(amountIn, amountInDecimals);
+    const amountInWei = parseUnits(amountIn, detectedDecimals);
 
     try {
       // Get dynamic fee tier priorities based on trade characteristics
-      const prioritizedFeeTiers = this.getOptimalFeeTiers(amountInWei, amountInDecimals);
+      const finalDecimals = detectedDecimals !== undefined ? detectedDecimals : 18;
+      const prioritizedFeeTiers = this.getOptimalFeeTiers(amountInWei, finalDecimals);
       const quotes: any[] = [];
 
       for (const fee of prioritizedFeeTiers) {
         try {
-          const quote = await this.calculateQuoteFromPool(tokenInAddress, tokenOutAddress, amountIn, amountInDecimals, fee);
+          const quote = await this.calculateQuoteFromPool(tokenInAddress, tokenOutAddress, amountIn, finalDecimals, fee);
 
           // Calculate liquidity score for this quote
           const liquidityScore = this.calculateLiquidityScore(quote, amountInWei);
@@ -950,7 +958,7 @@ export class WalletAgent {
         liquidityScore: bestQuote.liquidityScore,
         priceImpact: bestQuote.priceImpact,
         selectedFeeTier: bestQuote.feeTier,
-        tradeSizeCategory: this.categorizeTradeSize(amountInWei, amountInDecimals)
+        tradeSizeCategory: this.categorizeTradeSize(amountInWei, detectedDecimals || 18)
       };
     } catch (error) {
       throw new Error(`Failed to get quote: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -1369,8 +1377,14 @@ export class WalletAgent {
   }
 
   private parseTokenSymbol(token: string): Address {
-    // Check if it's a known token symbol
+    // Check if it's a known token symbol (case-insensitive)
     const upperToken = token.toUpperCase();
+    
+    // Handle special cases for stKAIA variations
+    if (upperToken === 'STKAIA' || upperToken === 'STAKED_KAIA') {
+      return SWAP_TOKENS.STAKED_KAIA as Address;
+    }
+    
     if (SWAP_TOKENS[upperToken as keyof typeof SWAP_TOKENS]) {
       return SWAP_TOKENS[upperToken as keyof typeof SWAP_TOKENS] as Address;
     }
@@ -1380,7 +1394,7 @@ export class WalletAgent {
       return token as Address;
     }
 
-    throw new Error(`Invalid token address or symbol: ${token}`);
+    throw new Error(`Invalid token address or symbol: ${token}. Supported tokens include: ${Object.keys(SWAP_TOKENS).join(', ')}`);
   }
 
   private getTokenSymbol(token: string): string {

@@ -9,7 +9,6 @@ const TOKEN_SYMBOL_MAP: Record<string, string> = {
     // API symbol -> Standard symbol
     'STAKED_KAIA': 'stKAIA',        // Lair Staked KAIA
     'MARBLEX': 'MBX',               // MARBLEX token
-    'SOMNIA': 'SOMNIA',            // Keep as is
     'KAIA': 'KAIA',                 // Keep as is
     'BORA': 'BORA',                 // Keep as is
     'SIX': 'SIX',                   // Keep as is
@@ -113,7 +112,7 @@ export const getKaiaEcosystemPrices = async () => {
         }
 
         // KAIA ecosystem tokens (using standard symbols)
-        const kaiaEcosystemSymbols = ['KAIA', 'BORA', 'MBX', 'SIX', 'SOMNIA', 'stKAIA'];
+        const kaiaEcosystemSymbols = ['KAIA', 'BORA', 'MBX', 'SIX', 'stKAIA'];
         
         const ecosystemPrices = (allPricesResult.prices || []).filter((price: any) => 
             kaiaEcosystemSymbols.includes(price.symbol)

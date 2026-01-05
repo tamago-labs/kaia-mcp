@@ -63,7 +63,7 @@ export const GetTokenPricesTool: McpTool = {
 
 export const GetKaiaEcosystemPricesTool: McpTool = {
     name: "get_kaia_ecosystem_prices",
-    description: "Get comprehensive market data including prices, market capitalization, 24h trading volume, and 24h price changes for KAIA ecosystem tokens only (KAIA, BORA, MBX, SIX, SOMNIA, stKAIA)",
+    description: "Get comprehensive market data including prices, market capitalization, 24h trading volume, and 24h price changes for KAIA ecosystem tokens only (KAIA, BORA, MBX, SIX, stKAIA)",
     schema: {},
     handler: async (agent: WalletAgent, input: Record<string, any>) => {
         const result = await getKaiaEcosystemPrices();

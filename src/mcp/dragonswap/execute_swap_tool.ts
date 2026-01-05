@@ -7,30 +7,29 @@ import { type McpTool } from "../../types";
  */
 export const ExecuteSwapTool: McpTool = {
   name: "dragonswap_execute_swap",
-  description: "Execute a token swap on DragonSwap V3 DEX",
-  schema: {
-    tokenIn: z.string()
-      .describe("Input token address or symbol (e.g., 'KAIA', 'USDT', '0x1234...')"),
-    tokenOut: z.string()
-      .describe("Output token address or symbol (e.g., 'KAIA', 'USDT', '0x1234...')"),
-    amountIn: z.string()
-      .describe("Amount of input tokens to swap (in human-readable format, e.g., '1.5')"),
-    amountInDecimals: z.number()
-      .optional()
-      .default(18)
-      .describe("Number of decimals for the input token (default: 18)"),
-    slippage: z.number()
-      .optional()
-      .default(50)
-      .describe("Slippage tolerance in basis points (e.g., 50 = 0.5%)"),
-    recipient: z.string()
-      .optional()
-      .describe("Recipient address (default: current wallet address)"),
-    deadline: z.number()
-      .optional()
-      .default(20)
-      .describe("Transaction deadline in minutes (default: 20)")
-  },
+    description: "Execute a token swap on DragonSwap V3 DEX. Note: USDT uses 6 decimals, most other tokens use 18 decimals. For stKAIA, you can use either 'stKAIA' or 'STAKED_KAIA'.",
+    schema: {
+      tokenIn: z.string()
+        .describe("Input token address or symbol (e.g., 'KAIA', 'USDT', 'stKAIA', '0x1234...')"),
+      tokenOut: z.string()
+        .describe("Output token address or symbol (e.g., 'KAIA', 'USDT', 'stKAIA', '0x1234...')"),
+      amountIn: z.string()
+        .describe("Amount of input tokens to swap (in human-readable format, e.g., '1.5')"),
+      amountInDecimals: z.number()
+        .optional()
+        .describe("Number of decimals for the input token (auto-detected if not provided, USDT=6, most tokens=18)"),
+      slippage: z.number()
+        .optional()
+        .default(50)
+        .describe("Slippage tolerance in basis points (e.g., 50 = 0.5%)"),
+      recipient: z.string()
+        .optional()
+        .describe("Recipient address (default: current wallet address)"),
+      deadline: z.number()
+        .optional()
+        .default(20)
+        .describe("Transaction deadline in minutes (default: 20)")
+    },
   handler: async (agent: WalletAgent, input: Record<string, any>) => {
     try {
       const {
